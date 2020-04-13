@@ -1,0 +1,3 @@
+<transform depend -> set variant.container false>
+<transform depend fmri=system/core-os@ -> delete variant.container .*>
+<transform depend variant.container=false -> drop>

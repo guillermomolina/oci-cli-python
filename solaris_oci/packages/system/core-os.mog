@@ -1,0 +1,78 @@
+<transform set name=org.opensolaris.smf.fmri -> drop>
+
+<transform depend -> set variant.container false>
+<transform depend fmri=pkg:/system/library@ -> delete variant.container .*>
+<transform depend fmri=pkg:/system/linker@ -> delete variant.container .*>
+<transform depend fmri=pkg:/system/library/libc@ -> delete variant.container .*>
+<transform depend fmri=pkg:/system/library/security/crypto@ -> delete variant.container .*>
+<transform depend fmri=pkg:/library/zlib@ -> delete variant.container .*>
+<transform depend fmri=pkg:/shell/ksh93@ -> delete variant.container .*>
+<transform depend fmri=pkg:/system/library/math@ -> delete variant.container .*>
+<transform depend variant.container=false -> drop>
+
+<transform license legacy hardlink -> drop>
+
+<transform user username=root -> set login-shell /bin/sh>
+
+<transform file dir link variant.debug.osnet=true -> drop>
+<transform file dir link facet.doc.man=.* -> drop>
+<transform file dir link facet.locale.de=true -> drop>
+<transform file dir link facet.locale.de_DE=true -> drop>
+<transform file dir link facet.locale.es=true -> drop>
+<transform file dir link facet.locale.es_ES=true -> drop>
+<transform file dir link facet.locale.fr=true -> drop>
+<transform file dir link facet.locale.fr_FR=true -> drop>
+<transform file dir link facet.locale.it=true -> drop>
+<transform file dir link facet.locale.it_IT=true -> drop>
+<transform file dir link facet.locale.ja=true -> drop>
+<transform file dir link facet.locale.ja_JP=true -> drop>
+<transform file dir link facet.locale.ko=true -> drop>
+<transform file dir link facet.locale.ko_KR=true -> drop>
+<transform file dir link facet.locale.pt_BR=true -> drop>
+<transform file dir link facet.locale.zh_CN=true -> drop>
+<transform file dir link facet.locale.zh_HK=true -> drop>
+<transform file dir link hardlink facet.devel=true -> drop>
+<transform dir path=var/\.migrate.* -> drop>
+<transform dir path=usr/lib/grub2.* -> drop>
+
+<transform file -> set variant.container false>
+<transform file path=etc/group -> delete variant.container .*>
+<transform file path=etc/passwd -> delete variant.container .*>
+<transform file path=etc/shadow -> delete variant.container .*>
+<transform file path=etc/shells -> delete variant.container .*>
+<transform file path=etc/ftpd/ftpusers -> delete variant.container .*>
+<transform file path=etc/nsswitch\.conf -> delete variant.container .*>
+<transform file path=etc/default/passwd -> delete variant.container .*>
+<transform file path=root/.profile -> delete variant.container .*>
+<transform file path=usr/bin/cat -> delete variant.container .*>
+<transform file path=usr/bin/chgrp -> delete variant.container .*>
+<transform file path=usr/bin/chmod -> delete variant.container .*>
+<transform file path=usr/bin/chown -> delete variant.container .*>
+<transform file path=usr/bin/cp -> delete variant.container .*>
+<transform file path=usr/bin/echo -> delete variant.container .*>
+<transform file path=usr/bin/hostname -> delete variant.container .*>
+<transform file path=usr/bin/ls -> delete variant.container .*>
+<transform file path=usr/bin/mv -> delete variant.container .*>
+<transform file path=var/run -> delete variant.container .*>
+<transform file variant.container=false -> drop>
+
+<transform link -> set variant.container false>
+<transform link path=usr/adm -> delete variant.container .*>
+<transform link path=bin/64$ -> delete variant.container .*>
+<transform link path=bin/32$ -> delete variant.container .*>
+<transform link path=usr/pub -> delete variant.container .*>
+<transform link path=usr/lib/locale/POSIX -> delete variant.container .*>
+<transform link path=usr/src -> delete variant.container .*>
+<transform link path=usr/spool -> delete variant.container .*>
+<transform link path=etc/svc/volatile -> delete variant.container .*>
+<transform link path=bin -> delete variant.container .*>
+<transform link path=var/run -> delete variant.container .*>
+<transform link path=etc/log -> delete variant.container .*>
+<transform link path=etc/fs/dev -> delete variant.container .*>
+<transform link path=usr/preserve -> delete variant.container .*>
+<transform link path=usr/lib/tabset -> delete variant.container .*>
+<transform link path=usr/tmp -> delete variant.container .*>
+<transform link path=usr/ccs/bin -> delete variant.container .*>
+<transform link path=usr/lib/cron -> delete variant.container .*>
+<transform link path=sbin -> delete variant.container .*>
+<transform link variant.container=false -> drop>
