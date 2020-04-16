@@ -18,7 +18,7 @@ from setuptools import setup
 
 # The following version is parsed by other parts of this package.
 # Don't change the format of the line, or the variable name.
-package_version = "0.0.1"
+package_version = "0.0.2"
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -42,16 +42,17 @@ setup(
     py_modules=['solaris_oci'],
     packages=['solaris_oci'],
     install_requires=[
-        'distro',
         'opencontainers',
-        'pyyaml'
+        'python-dateutil',
+        'humanize'
     ],
     entry_points={
         'console_scripts': [
             'runc = solaris_oci.runc.runc:main',
             'mkimage = solaris_oci.mkimage.mkimage:main',
             'mkrepo = solaris_oci.mkrepo.mkrepo:main',
-            'mkrootfs = solaris_oci.mkrootfs.mkrootfs:main'
+            'mkrootfs = solaris_oci.mkrootfs.mkrootfs:main',
+            'oci = solaris_oci.oci.oci:main'
         ]
     },
     classifiers=[

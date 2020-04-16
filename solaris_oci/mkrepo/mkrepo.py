@@ -27,10 +27,10 @@ if DEBUG:
     ptvsd.enable_attach()
     ptvsd.wait_for_attach()
 
-def get_packages_path():
+def get_mogrify_files_path():
     script_path = pathlib.Path(__file__)
     solaris_oci_path = script_path.parent.parent
-    return solaris_oci_path.joinpath('packages')
+    return solaris_oci_path.joinpath('mogrify')
 
 class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter, 
                       argparse.RawDescriptionHelpFormatter):
@@ -128,7 +128,7 @@ class MKRepo:
         target_repository = str(self.repo_path)
         if self.options.debug:
             print('source repository: ' + source_repository)
-        packages_path = get_packages_path()
+        mogrify_files_path = get_mogrify_files_path()
         for package_name in self.options.packages:
             print('Adding package ' + package_name)
             package_uri = self.get_package_uri(package_name)
@@ -145,15 +145,18 @@ class MKRepo:
                 else:
                     print('Package %s is up to date, nothing done' % package_name)
                     continue
-            mog_file_path = packages_path.joinpath(package_name + '.mog')
+            package_mog_file_path = mogrify_files_path.joinpath('solaris/' 
+                + package_name + '.mog')
+            all_mog_file_path = mogrify_files_path.joinpath('all.mog')
             if self.options.debug:
-                print('mogrify file path: ' + str(mog_file_path))
-            if mog_file_path.is_file():
+                print('mogrify file path: ' + str(package_mog_file_path))
+            if package_mog_file_path.is_file() and all_mog_file_path.is_file():
                 cmd = ['/usr/bin/pkgrecv',
                     '-s', source_repository,
                     '-d', target_repository,
                     '-c', '/var/run/pkg/cache', 
-                    '--mog-file', str(mog_file_path),
+                    '--mog-file', str(all_mog_file_path),
+                    '--mog-file', str(package_mog_file_path),
                     package_uri
                 ]
                 if self.options.debug:

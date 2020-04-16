@@ -1,0 +1,10 @@
+
+<transform depend -> set variant.container false>
+<transform depend fmri=pkg:/system/library@ -> delete variant.container .*>
+<transform depend fmri=system/core-os@ -> delete variant.container .*>
+<transform depend fmri=pkg:/system/library/security/crypto@ -> delete variant.container .*>
+<transform depend variant.container=false -> drop>
+
+<transform file dir link hardlink facet.doc.man=.* -> drop>
+<transform file dir link hardlink path=.*/pf.* -> drop>
+

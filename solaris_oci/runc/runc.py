@@ -15,7 +15,14 @@
 import argparse
 import importlib
 
-from solaris_oci.runc.commands import *
+from .create import Create
+from .delete import Delete
+from .kill import Kill
+from .list import List
+from .run import Run
+from .spec import Spec
+from .start import Start
+from .state import State
 
 class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter, 
                       argparse.RawDescriptionHelpFormatter):
@@ -87,7 +94,7 @@ value for "bundle" is the current directory.''')
         }
 
         for command in command_registry.values():
-            command.init_parser(parser, command_parser)
+            command.init_parser(command_parser)
  
         args = parser.parse_args()
 

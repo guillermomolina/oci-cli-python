@@ -1,0 +1,9 @@
+<transform depend -> set variant.container false>
+<transform depend fmri=pkg:/system/library@ -> delete variant.container .*>
+<transform depend fmri=pkg:/library/zlib@ -> delete variant.container .*>
+<transform depend variant.container=false -> drop>
+
+<transform file link hardlink -> set variant.container false>
+<transform file link hardlink path=.*/ld$ -> delete variant.container .*>
+<transform file link hardlink path=.*/ld\..* -> delete variant.container .*>
+<transform file link hardlink variant.container=false -> drop>

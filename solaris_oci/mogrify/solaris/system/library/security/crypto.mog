@@ -1,0 +1,4 @@
+<transform depend -> set variant.container false>
+<transform depend fmri=pkg:/system/library@ -> delete variant.container .*>
+<transform depend fmri=pkg:/system/linker@ -> delete variant.container .*>
+<transform depend variant.container=false -> drop>
