@@ -12,16 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from .layer import Layer
+from .image import Image
 from .descriptor import Descriptor
 
-class Image():
+class Manifest():
     def __init__(self, descriptor_json=None):
         self.descriptor = None
-        self.data = None
+        self.image = None
+        self.layers = None
+        self.size = None
         if descriptor_json is not None:
             self.descriptor = Descriptor(descriptor_json)
             self.load()
 
     def load(self):
-        self.data = self.descriptor.read()
+        manifest_json = self.descriptor.read()
+        image_descriptor_json = manifest_json['config']
+        self.image = Image(image_descriptor_json)
 
+        self.layers = []
+        self.size = 0
+        for layer_descriptor_json in manifest_json['layers']:
+            layer = Layer(layer_descriptor_json)
+            self.size += layer.descriptor.size
+            self.layers.append(layer)

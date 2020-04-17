@@ -12,16 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from .manifest import Manifest
 from .descriptor import Descriptor
 
-class Image():
+class Index():
     def __init__(self, descriptor_json=None):
         self.descriptor = None
-        self.data = None
+        self.name = None
+        self.manifests = None
         if descriptor_json is not None:
             self.descriptor = Descriptor(descriptor_json)
             self.load()
 
     def load(self):
-        self.data = self.descriptor.read()
-
+        self.name = self.descriptor.annotations.get('org.opencontainers.index.ref.name')
+        index_json = self.descriptor.read()
+        self.manifests = []
+        for manifest_descriptor_json in index_json['manifests']:
+            self.manifests.append(Manifest(manifest_descriptor_json))

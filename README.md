@@ -1,7 +1,7 @@
 # Solaris-OCI
 Open Container Initiative running on Solaris
 
-## Using the commands
+## Using runc
 
 You should have Solaris 11.4, with solaris-oci brand installed:
 
@@ -56,3 +56,13 @@ $ du -sh rootfs/
 49M     rootfs/
 ```
 (Only 49Mb!!!!)
+
+## Usinng oci CLI
+
+### Prepare filesystem
+
+'''
+$ sudo zfs create rpool/VARSHARE/oci
+$ sudo zfs create rpool/VARSHARE/oci/image
+$ sudo zfs create rpool/VARSHARE/oci/fs   
+'''

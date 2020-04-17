@@ -12,3 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
+
+oci_path = Path('/var/share/oci')
+fs_path = oci_path.joinpath('fs')
+image_path = oci_path.joinpath('image')
+blob_path = image_path.joinpath('blob')
+distribution_json_path = image_path.joinpath('distribution.json')

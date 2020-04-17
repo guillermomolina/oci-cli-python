@@ -13,15 +13,21 @@
 # limitations under the License.
 
 from .descriptor import Descriptor
+from .index import Index
 
-class Image():
+class Repository():
     def __init__(self, descriptor_json=None):
         self.descriptor = None
-        self.data = None
+        self.name = None
+        self.indexes = None
         if descriptor_json is not None:
             self.descriptor = Descriptor(descriptor_json)
             self.load()
 
     def load(self):
-        self.data = self.descriptor.read()
-
+        self.registry = self.descriptor.annotations.get('org.opencontainers.registry.ref.name')
+        self.name = self.descriptor.annotations.get('org.opencontainers.repository.ref.name')
+        repository_json = self.descriptor.read()
+        self.indexes = []
+        for index_descriptor_json in repository_json['indexes']:
+            self.indexes.append(Index(index_descriptor_json))

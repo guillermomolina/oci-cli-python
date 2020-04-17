@@ -12,4 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .distribution import Distribution
+from .descriptor import Descriptor
+
+class Layer():
+    def __init__(self, descriptor_json=None):
+        self.descriptor = None
+        if descriptor_json is not None:
+            self.descriptor = Descriptor(descriptor_json)
+
+    def load(self):
+        pass

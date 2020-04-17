@@ -12,16 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-DEBUG=False
-#DEBUG=True
-if DEBUG:
-    import ptvsd
-    ptvsd.enable_attach()
-    ptvsd.wait_for_attach()
-
 import argparse
 import importlib
 
+from solaris_oci.oci import config
 from .container import Container
 from .volume import Volume
 from .image import Image
@@ -38,17 +32,21 @@ class OCI:
     }
 
     def __init__(self):
-        self.parser = argparse.ArgumentParser(
+        parser = argparse.ArgumentParser(
             formatter_class=CustomFormatter,
             description='A self-sufficient runtime for containers')
-        self.parser.add_argument('-D', '--debug',
+        parser.add_argument('-D', '--debug',
             help='Enable debug mode', 
             action='store_true')
-        self.parser.add_argument('-v', '--version',
+        parser.add_argument('-v', '--version',
             help='Print version information and quit', 
             action='store_true')
+        parser.add_argument('--root', 
+            help='root directory for storage',
+            metavar='string',
+            default=config.oci_path)
 
-        oci_subparsers = self.parser.add_subparsers(
+        oci_subparsers = parser.add_subparsers(
             dest='command',
             metavar='COMMAND',
             required=True)
@@ -56,10 +54,15 @@ class OCI:
         for command in OCI.commands.values():
             command.init_parser(oci_subparsers)
  
-        args = self.parser.parse_args()
+        options = parser.parse_args()
 
-        command = OCI.commands[args.command]
-        command(args)
+        if options.debug:
+            import ptvsd
+            ptvsd.enable_attach()
+            ptvsd.wait_for_attach()
+
+        command = OCI.commands[options.command]
+        command(options)
 
 def main():
     OCI()

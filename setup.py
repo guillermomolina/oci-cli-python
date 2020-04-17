@@ -12,57 +12,91 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+from setuptools import setup, find_packages
 import os
-import codecs
-from setuptools import setup
 
-# The following version is parsed by other parts of this package.
-# Don't change the format of the line, or the variable name.
-package_version = "0.0.2"
+################################################################################
+# HELPER FUNCTIONS #############################################################
+################################################################################
 
-here = os.path.abspath(os.path.dirname(__file__))
+def get_lookup():
+    '''get version by way of the version file
+    '''
+    lookup = dict()
+    version_file = os.path.join('solaris_oci', 'version.py')
+    with open(version_file) as filey:
+        exec(filey.read(), lookup)
+    return lookup
 
+def get_install_requirements():
+    with open('requirements.txt') as f:
+        requirements = f.read().splitlines()
+        return requirements
 
-def read(*parts):
-    # intentionally *not* adding an encoding option to open
-    return codecs.open(os.path.join(here, *parts), 'r').read()
+# Make sure everything is relative to setup.py
+install_path = os.path.dirname(os.path.abspath(__file__)) 
+os.chdir(install_path)
 
+# Get version information from the lookup
+lookup = get_lookup()
+VERSION = lookup['__version__']
+NAME = lookup['NAME']
+AUTHOR = lookup['AUTHOR']
+AUTHOR_EMAIL = lookup['AUTHOR_EMAIL']
+PACKAGE_URL = lookup['PACKAGE_URL']
+KEYWORDS = lookup['KEYWORDS']
+DESCRIPTION = lookup['DESCRIPTION']
+LICENSE = lookup['LICENSE']
+with open('README.md') as readme:
+    LONG_DESCRIPTION = readme.read()
 
-setup(
-    name='solaris-oci',
-    version=package_version,
-    url='https://github.com/guillermomolina/solaris-oci',
-    author='Guillermo Adrián Molina',
-    author_email='guillermomolina@hotmail.com',
-    license='Apache License, Version 2.0',
-    platforms='All',
-    description='Solaris-OCI - Open Container Initiative running on Solaris',
-    long_description=read('README.md'),
-    long_description_content_type='text/markdown',
-    py_modules=['solaris_oci'],
-    packages=['solaris_oci'],
-    install_requires=[
-        'opencontainers',
-        'python-dateutil',
-        'humanize'
-    ],
-    entry_points={
-        'console_scripts': [
-            'runc = solaris_oci.runc.runc:main',
-            'mkimage = solaris_oci.mkimage.mkimage:main',
-            'mkrepo = solaris_oci.mkrepo.mkrepo:main',
-            'mkrootfs = solaris_oci.mkrootfs.mkrootfs:main',
-            'oci = solaris_oci.oci.oci:main'
+################################################################################
+# MAIN #########################################################################
+################################################################################
+
+if __name__ == "__main__":
+
+    INSTALL_REQUIRES = get_install_requirements()
+    #DEV_REQUIRES = get_dev_requirements()
+    #TESTS_REQUIRES = get_test_requirements()
+
+    setup(
+        name=NAME,
+        version=VERSION,
+        author=AUTHOR,
+        author_email=AUTHOR_EMAIL,
+        maintainer=AUTHOR,
+        maintainer_email=AUTHOR_EMAIL,
+        packages=find_packages(), 
+        include_package_data=True,
+        zip_safe=False,
+        url=PACKAGE_URL,
+        license=LICENSE,
+        description=DESCRIPTION,
+        long_description=LONG_DESCRIPTION,
+        long_description_content_type="text/markdown",
+        keywords=KEYWORDS,
+        setup_requires=["pytest-runner"],
+        #tests_require=TESTS_REQUIRES,
+        install_requires=INSTALL_REQUIRES,
+        entry_points={
+            'console_scripts': [
+                'runc = solaris_oci.runc.runc:main',
+                'mkimage = solaris_oci.mkimage.mkimage:main',
+                'mkrepo = solaris_oci.mkrepo.mkrepo:main',
+                'mkrootfs = solaris_oci.mkrootfs.mkrootfs:main',
+                'oci = solaris_oci.cli.oci:main'
+            ]
+        },
+        classifiers=[
+            'Development Status :: 5 - Production/Stable',
+            'Intended Audience :: Developers',
+            'Intended Audience :: System Administrators',
+            'License :: OSI Approved :: Apache Software License',
+            'Operating System :: POSIX :: SunOS/Solaris',
+            'Programming Language :: Python :: 3.7',
+            'Topic :: Software Development :: Libraries :: Python Modules',
+            'Topic :: System :: Operating System',
         ]
-    },
-    classifiers=[
-        'Development Status :: 5 - Production/Stable',
-        'Intended Audience :: Developers',
-        'Intended Audience :: System Administrators',
-        'License :: OSI Approved :: Apache Software License',
-        'Operating System :: POSIX :: SunOS/Solaris',
-        'Programming Language :: Python :: 3.7',
-        'Topic :: Software Development :: Libraries :: Python Modules',
-        'Topic :: System :: Operating System',
-    ]
-)
+    )
