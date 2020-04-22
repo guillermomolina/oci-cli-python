@@ -12,22 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .descriptor import Descriptor
-from .index import Index
+import json 
+from opencontainers.distribution.v1 import TagList
+from . import Image
 
 class Repository():
-    def __init__(self, descriptor_json=None):
-        self.descriptor = None
-        self.name = None
-        self.indexes = None
-        if descriptor_json is not None:
-            self.descriptor = Descriptor(descriptor_json)
-            self.load()
+    def __init__(self, name):
+        self.name = name
+        self.tag_list = None
+        self.images = None
 
-    def load(self):
-        self.registry = self.descriptor.annotations.get('org.opencontainers.registry.ref.name')
-        self.name = self.descriptor.annotations.get('org.opencontainers.repository.ref.name')
-        repository_json = self.descriptor.read()
-        self.indexes = []
-        for index_descriptor_json in repository_json['indexes']:
-            self.indexes.append(Index(index_descriptor_json))
+    def load(self, distribution_path):
+        repository_path = distribution_path.joinpath(self.name)
+        repository_json_path = repository_path.joinpath('repository.json')
+        with repository_json_path.open() as repository_json_file:
+            repository_json = json.load(repository_json_file)
+            self.tag_list = TagList(self.name)
+            self.tag_list.load(repository_json)
+            self.images = []
+            for tag_name in self.tag_list.get('Tags'):
+                image = Image(self.name, tag_name)
+                image.load(distribution_path)
+                self.images.append(image)

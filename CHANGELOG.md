@@ -1,8 +1,20 @@
 # Change log for Solaris OCI
 
+## XXXX-XX-XX: Version 0.0.5
+
+- TODO "oci image load"
+- TODO "oci image save"
+- TODO "oci image import"
+
+
+## 2020-04-22: Version 0.0.4
+
+- Changed default directory to /var/lib/oci
+- Added "mkimage"
+
+
 ## 2020-04-17: Version 0.0.3
 
-- Added "oci image hydrate"
 - Added "oci image inspect"
 - Split cli and api
 - Added checks to OCI structs with python-oci package

@@ -12,4 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from .image import Image
+from .repository import Repository
 from .distribution import Distribution
+

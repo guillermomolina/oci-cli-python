@@ -14,8 +14,7 @@
 
 from pathlib import Path
 
-oci_path = Path('/var/share/oci')
-fs_path = oci_path.joinpath('fs')
-image_path = oci_path.joinpath('image')
-blob_path = image_path.joinpath('blob')
-distribution_json_path = image_path.joinpath('distribution.json')
+oci_path = Path('/var/lib/oci')
+zfs_path = oci_path.joinpath('zfs')
+distribution_path = oci_path.joinpath('image')
+distribution_json_path = distribution_path.joinpath('distribution.json')

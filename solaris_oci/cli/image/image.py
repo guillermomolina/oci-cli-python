@@ -16,9 +16,11 @@ import subprocess
 import argparse
 import pathlib
 
-from .hydrate import Hydrate
+from .import_ import Import
 from .inspect import Inspect
 from .list import List
+from .load import Load
+from .save import Save
 
 '''
 image -> repository
@@ -27,9 +29,11 @@ tag -> index
 
 class Image:
     commands = {
-        'hydrate': Hydrate,
+        'import': Import,
         'inspect': Inspect,
-        'ls': List
+        'load': Load,
+        'ls': List,
+        'save': Save
     }
 
     @staticmethod

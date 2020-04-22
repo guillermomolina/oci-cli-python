@@ -25,7 +25,7 @@ $ pip install solaris-oci
 
 ### Create a container (Using standard packages)
 ```
-$ mkdir container
+$ mkdir -p container
 $ cd container
 $ runc spec
 $ sudo mkrootfs .
@@ -61,8 +61,10 @@ $ du -sh rootfs/
 
 ### Prepare filesystem
 
-'''
-$ sudo zfs create rpool/VARSHARE/oci
-$ sudo zfs create rpool/VARSHARE/oci/image
-$ sudo zfs create rpool/VARSHARE/oci/fs   
-'''
+```
+$ sudo zfs create -o mountpoint=/var/lib/oci rpool/oci
+$ sudo zfs create rpool/oci/zfs
+
+$ sudo mkdir /var/lib/oci/image
+$ sudo mkdir /var/lib/oci/containers
+```

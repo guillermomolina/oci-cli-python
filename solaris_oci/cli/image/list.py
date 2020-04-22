@@ -12,14 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import subprocess
 import argparse
 import humanize
-from datetime import *
+from datetime import datetime, timezone
 
 from solaris_oci.util.print import print_table
-from solaris_oci.oci import config as oci_config
-from solaris_oci.oci.image.distribution import Distribution
+from solaris_oci.oci.image import Distribution
 
 class List:
     @staticmethod
@@ -38,22 +36,25 @@ class List:
             action='store_true')
              
     def __init__(self, options):
-        distribution = Distribution() 
-        distribution.load()
+        database = Distribution() 
+        database.load()
         images = []
-        for image in distribution.images():
-            data = {}
-            data['registry'] = image['registry']
-            data['tag'] = image['tag']
-            if options.digests:
-               data['digest'] = image['digest']
-            image_id = image['id']
-            if not options.no_trunc:
-                image_id = image_id.split(':')[1][0:12]
-            data['image id'] = image_id
-            data['created'] = image['created']
-            data['size'] = humanize.naturalsize(image['size'])
-            self.insert_image(images, data)
+        for repository in database.repositories:
+            for tag in repository.images:
+                for manifest in tag.manifests:
+                    config = manifest['config']
+                    image = {}
+                    image['registry'] = 'UNKNOWN'
+                    image['tag'] = tag.tag
+                    if options.digests:
+                        data['digest'] = ''
+                    image_id = tag.id
+                    if not options.no_trunc:
+                        image_id = image_id.split(':')[1][0:12]
+                    image['image id'] = image_id
+                    image['created'] = config.get('Created')
+                    image['size'] = humanize.naturalsize(0)
+                    self.insert_image(images, image)
         for image in images:
             image['created'] = humanize.naturaltime(datetime.now(tz=timezone.utc) - image['created'])
         print_table(images)

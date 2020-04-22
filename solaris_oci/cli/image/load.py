@@ -15,25 +15,28 @@
 import subprocess
 import argparse
 import pathlib
-import json
-from dateutil import parser
-import humanize
-from datetime import *
 
-from opencontainers.digest import NewDigestFromEncoded, Parse
-from opencontainers.image.v1 import Index
+from solaris_oci.oci.image import Distribution
 
-from solaris_oci.util.print import print_table
-
-class Hydrate:
+class Load:
     @staticmethod
     def init_parser(image_subparsers, parent_parser):
-        parser = image_subparsers.add_parser('hydrate',
+        parser = image_subparsers.add_parser('load',
             parents=[parent_parser],
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-            description='Hydrate an image',
-            help='Hydrate an image to a filesystem')
+            description='Import the contents from a tarball to create a filesystem image',
+            help='Import the contents from a tarball')
+        parser.add_argument('-m', '--message', 
+            help='Set commit message for imported image',
+            metavar='string')
+        parser.add_argument('file',
+            metavar='file|URL|-',
+            help='Name of the file or URL to import, or "-" for the standard input')
+        parser.add_argument('repository',
+            metavar='REPOSITORY[:TAG]',
+            nargs='?',
+            help='Name of the repository to import to')
   
     def __init__(self, options):
-        distribution = self.load_distribution()
-        #print(json.dumps(distribution, indent=2))
+        distribution = Distribution() 
+            

@@ -63,13 +63,14 @@ class MKRootFS:
 
         path = pathlib.Path(self.options.path).resolve()
         self.root_path = path.joinpath('rootfs/root')
+
         self.create_rootfs()
         self.install_packages()
         self.create_repository_db()
-        if self.options.debug:
-            print('changing owner to root:root of: %s' % path)
-        for file_path in path.glob('**/*'):
-            shutil.chown(file_path, 'root', 'root')
+
+        self_assembly_path = self.root_path.joinpath('.SELF-ASSEMBLY-REQUIRED')
+        self_assembly_path.unlink(missing_ok=True)
+
         if self.options.debug:
             print('Done initializing rootfs at: ' + str(self.root_path))
 
