@@ -4,7 +4,7 @@ import tempfile
 import json
 
 from solaris_oci.util.file import tar
-from solaris_oci.oci.image import Image
+from solaris_oci.oci.image import Distribution
 
 class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter, 
                       argparse.RawDescriptionHelpFormatter):
@@ -77,20 +77,24 @@ create it with "runc -b %s spec"''' %
         rootfs_path = bundle_path.joinpath(config_json['root']['path'], 'root')
         if not rootfs_path.is_dir():
             error('rootfs directory (%s) does not exist' % str(rootfs_path))
+        repository, tag = options.repository_and_tag
+        if tag in ['latest']:
+            error('Tag name (%s) is reserved and can not be used' % tag)
 
-        with tempfile.TemporaryDirectory() as tmp_dir_name:
-            tmp_dir_path = pathlib.Path(tmp_dir_name)
-            layer_tar_path = tmp_dir_path.joinpath('layer.tar')
-            if tar(layer_tar_path, rootfs_path) != 0:
-                error('could not create layer file (%s) from rootfs directory (%s)'
-                    % (str(layer_tar_path), str(rootfs_path)))
-            repository, tag = options.repository_and_tag
-            image = Image(repository, tag)
-            image.create(tmp_dir_path, layer_tar_path, config_json)
-            layer_tar_path.unlink()
-            output_path = options.output or '-'
-            tar(output_path, tmp_dir_path)
-
+        try:
+            with tempfile.TemporaryDirectory() as tmp_dir_name:
+                tmp_dir_path = pathlib.Path(tmp_dir_name)
+                rootfs_tar_path = tmp_dir_path.joinpath('layer.tar')
+                if tar(rootfs_path, rootfs_tar_path) != 0:
+                    error('could not create layer file (%s) from rootfs directory (%s)'
+                        % (str(rootfs_tar_path), str(rootfs_path)))
+                distribution = Distribution()
+                image = distribution.create_image(repository, tag, rootfs_tar_path, config_json)
+                tar(image.tag_path.resolve(), options.output)
+        except Exception as e:         
+            print(e.args)
+            raise e
+            exit(-1)
 
 def main():
     MKImage()

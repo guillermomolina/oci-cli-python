@@ -12,25 +12,68 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json 
+import json
+import pathlib
 from opencontainers.distribution.v1 import TagList
+from solaris_oci import oci
+from solaris_oci.util.file import rm
 from . import Image
 
 class Repository():
     def __init__(self, name):
         self.name = name
-        self.tag_list = None
         self.images = None
+        images_path = pathlib.Path(oci.config['images']['path'])
+        self.path = images_path.joinpath(self.name)
+        self.registry_file_path = self.path.joinpath('repository.json')
+        if self.registry_file_path.is_file():
+            self.load()
+        else:
+            self.create()
 
-    def load(self, distribution_path):
-        repository_path = distribution_path.joinpath(self.name)
-        repository_json_path = repository_path.joinpath('repository.json')
-        with repository_json_path.open() as repository_json_file:
-            repository_json = json.load(repository_json_file)
-            self.tag_list = TagList(self.name)
-            self.tag_list.load(repository_json)
-            self.images = []
-            for tag_name in self.tag_list.get('Tags'):
-                image = Image(self.name, tag_name)
-                image.load(distribution_path)
-                self.images.append(image)
+    def load(self):
+        tag_list = TagList.from_file(self.registry_file_path)
+        self.images = {}
+        for tag_name in tag_list.get('Tags'):
+            image = Image(self.name, tag_name)
+            image.load()
+            self.images[tag_name] = image
+
+    def create(self):
+        self.images = {}
+        self.save()
+
+    def save(self):
+        if not self.path.is_dir():
+            self.path.mkdir(parents=True)
+        tag_list_json = {
+            'name': self.name,
+            'tags': list(self.images.keys())
+        }
+        tag_list = TagList.from_json(tag_list_json)
+        tag_list.save(self.registry_file_path)
+
+    def create_image(self, tag_name, rootfs_tar_file, config_json):
+        image = self.images.get(tag_name, None)
+        if image is not None:
+            raise Exception('Image (%s:%s) already exists, can not create'
+                % (self.name, tag_name))
+        image = Image(self.name, tag_name)
+        self.images[tag_name] = image
+        self.save()
+        image.create(rootfs_tar_file, config_json)
+        return image
+
+    def destroy_image(self, tag_name):
+        image = self.images.get(tag_name, None)
+        if image is None:
+            raise Exception('Image tagged (%s) does not exist' % tag_name)
+        image.destroy()
+        del self.images[tag_name]
+        if len(self.images) == 0:
+            rm(self.registry_file_path)
+            rm(self.path)
+            return None
+        else:
+            self.save()
+        return self

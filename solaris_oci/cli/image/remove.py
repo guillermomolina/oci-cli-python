@@ -17,24 +17,27 @@ import json
 import argparse
 from solaris_oci.oci.image import Distribution
 
-class Inspect:
+class Remove:
     @staticmethod
     def init_parser(image_subparsers, parent_parser):
-        parser = image_subparsers.add_parser('inspect',
+        parser = image_subparsers.add_parser('rm',
             parents=[parent_parser],
+            aliases=['remove', 'rmi'],
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-            description='Display detailed information on one or more images',
-            help='Display detailed information on one or more images')
+            description='Remove one or more images',
+            help='Remove one or more images')
         parser.add_argument('image',
             nargs='+', 
             metavar='IMAGE',
-            help='Name of the image to inspect')
+            help='Name of the image to remove')
  
     def __init__(self, options):
-        images = self.images(options.image)
-        print(json.dumps(images, indent=4, default=str))
+        distribution = Distribution()
+        images = self.images(distribution, options.image)
+        for repository, tag in images:
+            distribution.destroy_image(repository, tag)
 
-    def images(self, filter):
+    def images(self, distribution, filter):
         repositories = {}
         for reference in filter:
             records = reference.split(':')
@@ -53,21 +56,11 @@ class Inspect:
                     value = tags
             repositories[name] = value
     
-        distribution = Distribution()
         images = []
         for repository in distribution.repositories.values():
             if repository.name in repositories:
                 tags = repositories[repository.name]
-                for tag in repository.images.values():
-                    if tags is None or tag.tag in tags:
-                        for manifest in tag.manifests:
-                            image = manifest['config']
-                            image_json = image.to_dict(use_real_name=True)
-                            image_json['RepoTags'] = [ 
-                                tag.repository + ':' + tag.tag 
-                            ]
-                            image_json['RepoDigests'] = [ 
-                                tag.repository + ':' + tag.digest 
-                            ]
-                            images.append(image_json)
+                for tag in repository.images:
+                    if tags is None or tag in tags:
+                        images.append((repository.name, tag))
         return images

@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__version__ = "0.0.5"
-AUTHOR = "Guillermo Adrián Molina"
-AUTHOR_EMAIL = "guillermoadrianmolina@gmail.com"
-NAME = "solaris-oci"
-PACKAGE_URL = "http://www.github.com/guillermomolina/solaris-oci"
-KEYWORDS = "open containers, oci, solaris"
-DESCRIPTION = "Python module for oci running on Solaris"
-LICENSE = "LICENSE"
+from .zfs_driver import ZfsDriver
+
+class Graph:
+    @classmethod
+    def driver(cls, driver_type='zfs'):
+        if driver_type != 'zfs':
+            raise Exception('Unknown driver type (%s)' % driver_type)
+        return ZfsDriver()

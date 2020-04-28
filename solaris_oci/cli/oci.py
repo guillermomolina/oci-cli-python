@@ -44,7 +44,7 @@ class OCI:
         parser.add_argument('--root', 
             help='root directory for storage',
             metavar='string',
-            default=config.oci_path)
+            default=config['images']['path'])
 
         oci_subparsers = parser.add_subparsers(
             dest='command',

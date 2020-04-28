@@ -12,3 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from .graph import Graph
+
+config = {
+    'global': {
+        'path': '/var/lib/oci',
+        'run_path': '/var/run/oci'
+    },
+    'images':{
+        'path': '/var/lib/oci/images',
+        'registry': '/var/lib/oci/images/distribution.json'
+    },
+    'layers':{
+        'path': '/var/lib/oci/layers',
+        'registry': '/var/lib/oci/images/registry.json'
+    },
+    'containers':{
+        'path': '/var/lib/oci/containers'
+    },
+    'graph': {
+        'driver': 'zfs',
+        'zfs': {
+            'filesystem': 'rpool/oci'
+        }
+    }
+}
+
+graph_driver = Graph.driver()

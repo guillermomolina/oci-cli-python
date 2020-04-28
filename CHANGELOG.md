@@ -1,10 +1,19 @@
 # Change log for Solaris OCI
 
-## XXXX-XX-XX: Version 0.0.5
+## XXXX-XX-XX: Version 0.0.6
 
 - TODO "oci image load"
 - TODO "oci image save"
 - TODO "oci image import"
+
+
+## 2020-04-28: Version 0.0.5
+
+- Added the graph engine
+- Added the ZFS graph driver
+- Added the ZFS media type
+- Added xz, lz and parallel compressing methods
+- Added "oci image rm"
 
 
 ## 2020-04-22: Version 0.0.4

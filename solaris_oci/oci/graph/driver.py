@@ -12,9 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pathlib import Path
-
-oci_path = Path('/var/lib/oci')
-zfs_path = oci_path.joinpath('zfs')
-distribution_path = oci_path.joinpath('image')
-distribution_json_path = distribution_path.joinpath('distribution.json')
+class Driver:
+    def __init__(self):
+        pass

@@ -20,6 +20,7 @@ from .import_ import Import
 from .inspect import Inspect
 from .list import List
 from .load import Load
+from .remove import Remove
 from .save import Save
 
 '''
@@ -33,6 +34,7 @@ class Image:
         'inspect': Inspect,
         'load': Load,
         'ls': List,
+        'rm': Remove,
         'save': Save
     }
 

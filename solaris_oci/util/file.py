@@ -13,17 +13,10 @@
 # limitations under the License.
 
 
-import hashlib
 import subprocess
-
-def sha256sum_py(file_path):
-    # Should be faster with system's sha256
-    sha256_hash = hashlib.sha256()
-    with open(file_path, 'rb') as f:
-        for byte_block in iter(lambda: f.read(4096),b''):
-            sha256_hash.update(byte_block)
-        return sha256_hash.hexdigest()
-    return None
+import secrets
+import time
+import shutil
 
 def sha256sum(file_path):
     cmd = ['/usr/bin/sha256sum', str(file_path)]
@@ -34,19 +27,63 @@ def sha256sum(file_path):
         return records[0]
     return None
 
-def tar(tar_file_path, dir_path, compress=False):
+def tar(dir_path, tar_file_path=None, compress=False):
     args = '-c'
     if compress:
         args += 'z'
-    cmd = ['/usr/gnu/bin/tar', args, '-f', str(tar_file_path)]
+    if tar_file_path is None:
+        tar_file_path_str = '-'
+    else:
+        tar_file_path_str = str(tar_file_path)
+    cmd = ['/usr/gnu/bin/tar', args, '-f', tar_file_path_str]
     cmd += [ str(f.relative_to(dir_path)) for f in dir_path.glob('*') ]
     return subprocess.call(cmd, cwd=dir_path)
 
-def gzip(source_file_path, target_file_path, keep_original=True):
-    with target_file_path.open('wb') as target_file:
-        cmd = ['/usr/bin/gzip', '-cr', str(source_file_path)]
-        status = subprocess.call(cmd, stdout=target_file)
-        if status == 0 and not keep_original:
-            source_file_path.unlink()
-        return status
-    return 1
+def untar(tar_file_path, dir_path):
+    cmd = ['/usr/gnu/bin/tar', '-x', '-f', str(tar_file_path)]
+    return subprocess.call(cmd, cwd=dir_path)
+
+def compress(file_path, method='gz', 
+    parallel=True, keep_original=False):
+
+    commands  = {
+        'xz': ['/usr/bin/xz'],
+        'gz': ['/usr/bin/gzip'],
+        'bz2': ['/usr/bin/bzip2'],
+        'lz': ['/usr/bin/lzma']
+    }
+
+    parallel_commands = {
+        'gz': ['/usr/bin/pigz'],
+        'xz': ['/usr/bin/xz', '-T', '0'],
+    }
+    if parallel:
+        cmd = parallel_commands.get(method, None)
+    else:
+        cmd = commands.get(method, None)
+    if cmd is None:
+        raise Exception('method (%s) not supported' % method)
+
+    if keep_original:
+        cmd.append('--keep')
+        
+    cmd.append(str(file_path))
+    return subprocess.call(cmd)
+
+def du(dir_name):
+    output = subprocess.check_output(['/usr/gnu/bin/du', '-bs', dir_name])
+    value = output.decode('utf-8').split()[0]
+    return int(value)
+        
+def rm(file_name, retries=5, sleep=1):
+    for i in range(retries):
+        try:
+            if file_name.is_dir():
+               shutil.rmtree(file_name)
+            elif file_name.is_file() or file_name.is_symlink():
+                file_name.unlink()
+        except Exception as e:
+            print('WARNING: Could not delete path (%s) at attempt (%i)' % (
+                str(file_name), i))
+            time.sleep(sleep)
+

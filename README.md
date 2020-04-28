@@ -59,12 +59,31 @@ $ du -sh rootfs/
 
 ## Usinng oci CLI
 
-### Prepare filesystem
+### Prepare filesystem for oci
 
 ```
-$ sudo zfs create -o mountpoint=/var/lib/oci rpool/oci
-$ sudo zfs create rpool/oci/zfs
-
-$ sudo mkdir /var/lib/oci/image
-$ sudo mkdir /var/lib/oci/containers
+$ sudo zfs create -o mountpoint=none -o compress=lz4 rpool/oci
 ```
+
+### Create an image from container
+
+```
+$ cd ~/container
+$ sudo mkimage -o /tmp/solaris.tar solaris:mytag
+```
+
+### List images
+
+```
+$ oci image ls
+REGISTRY   TAG     IMAGE ID       CREATED        SIZE   
+solaris    mytag   8556bb25018f   a minute ago   46.0 MB
+```
+
+### Delete an image
+
+```
+$ oci image rm solaris:mytag
+```
+
+

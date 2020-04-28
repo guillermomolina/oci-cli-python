@@ -37,23 +37,22 @@ class List:
              
     def __init__(self, options):
         database = Distribution() 
-        database.load()
         images = []
-        for repository in database.repositories:
-            for tag in repository.images:
+        for repository in database.repositories.values():
+            for tag in repository.images.values():
                 for manifest in tag.manifests:
                     config = manifest['config']
                     image = {}
-                    image['registry'] = 'UNKNOWN'
+                    image['registry'] = tag.repository
                     image['tag'] = tag.tag
                     if options.digests:
-                        data['digest'] = ''
+                        image['digest'] = tag.digest
                     image_id = tag.id
                     if not options.no_trunc:
                         image_id = image_id.split(':')[1][0:12]
                     image['image id'] = image_id
                     image['created'] = config.get('Created')
-                    image['size'] = humanize.naturalsize(0)
+                    image['size'] = humanize.naturalsize(tag.size)
                     self.insert_image(images, image)
         for image in images:
             image['created'] = humanize.naturaltime(datetime.now(tz=timezone.utc) - image['created'])

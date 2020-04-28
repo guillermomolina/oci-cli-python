@@ -12,25 +12,59 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json 
+import json
+import pathlib
 from opencontainers.distribution.v1 import RepositoryList
-from .. import config as osi_config
+from solaris_oci import oci
 from . import Repository
 
 class Distribution():
     def __init__(self):
-        self.repository_list = None
-        self.repositories = None
+        self.repositories = {}
+        images_path = pathlib.Path(oci.config['images']['path'])
+        self.path = images_path
+        self.registry_file_path = self.path.joinpath('distribution.json')
+        if self.registry_file_path.is_file():
+            self.load()
+        else:
+            self.create()
 
     def load(self):
-        distribution_path = osi_config.distribution_path
-        distribution_json_path = osi_config.distribution_json_path
-        with distribution_json_path.open() as distribution_json_file:
-            distribution_json = json.load(distribution_json_file)
-            self.repository_list = RepositoryList()
-            self.repository_list.load(distribution_json)
-            self.repositories = []
-            for repository_name in self.repository_list.get('Repositories'):
-                repository = Repository(repository_name)
-                repository.load(distribution_path)
-                self.repositories.append(repository)
+        repository_list = RepositoryList.from_file(self.registry_file_path)
+        self.repositories = {}
+        for repository_name in repository_list.get('Repositories'):
+            repository = Repository(repository_name)
+            self.repositories[repository_name] = repository
+
+    def create(self):
+        self.repositories = {}
+        self.save()
+
+    def save(self):
+        if not self.path.is_dir():
+            self.path.mkdir(parents=True)
+        repository_list_json = {
+            'repositories': list(self.repositories.keys())
+        }
+        repository_list = RepositoryList.from_json(repository_list_json)
+        repository_list.save(self.registry_file_path)
+
+    def create_image(self, repository_name, tag_name, rootfs_tar_file, config_json):
+        repository = self.repositories.get(repository_name, None)
+        if repository is None:
+            repository = Repository(repository_name)
+            self.repositories[repository_name] = repository
+            self.save()
+        return repository.create_image(tag_name, rootfs_tar_file, config_json)
+
+    def destroy_image(self, repository_name, tag_name):
+        repository = self.repositories.get(repository_name, None)
+        if repository is None:
+            raise Exception('Repository (%s) does not exist' % repository_name)
+        repository = repository.destroy_image(tag_name)
+        if repository is None:
+            del self.repositories[repository_name]
+        else:
+            # Not really needed
+            self.repositories[repository_name] = repository
+        self.save()

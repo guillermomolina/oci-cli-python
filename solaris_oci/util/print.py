@@ -19,7 +19,7 @@ def print_table(table):
 
     columns = []
     # initialize columns from first row's keys
-    for key in table[0].keys():
+    for key in table[0]:
         if key != 'ociVersion':             
             columns.append({
                 'key': key,

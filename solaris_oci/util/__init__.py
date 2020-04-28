@@ -12,3 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+import secrets
+
+def generate_random_sha256():
+    return secrets.token_hex(nbytes=32)
+
+def generate_random_id():
+    return secrets.token_hex(nbytes=8)
