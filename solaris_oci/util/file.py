@@ -16,7 +16,7 @@
 import subprocess
 import secrets
 import time
-import shutil
+#import shutil
 
 def sha256sum(file_path):
     cmd = ['/usr/bin/sha256sum', str(file_path)]
@@ -77,13 +77,17 @@ def du(dir_name):
         
 def rm(file_name, retries=5, sleep=1):
     for i in range(retries):
+        #print('rm ' + str(file_name))
+        if not file_name.exists():
+            return 0
         try:
             if file_name.is_dir():
-               shutil.rmtree(file_name)
-            elif file_name.is_file() or file_name.is_symlink():
+                file_name.rmdir()
+            else:
                 file_name.unlink()
-        except Exception as e:
+        except:
             print('WARNING: Could not delete path (%s) at attempt (%i)' % (
                 str(file_name), i))
             time.sleep(sleep)
+    return -1
 

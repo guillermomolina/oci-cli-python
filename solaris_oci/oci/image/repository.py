@@ -14,66 +14,94 @@
 
 import json
 import pathlib
-from opencontainers.distribution.v1 import TagList
+from opencontainers.image.v1 import Index, ImageLayout
 from solaris_oci import oci
+from solaris_oci.util import id_to_digest
 from solaris_oci.util.file import rm
-from . import Image
+from .image import Image
 
 class Repository():
     def __init__(self, name):
         self.name = name
-        self.images = None
-        images_path = pathlib.Path(oci.config['images']['path'])
-        self.path = images_path.joinpath(self.name)
-        self.registry_file_path = self.path.joinpath('repository.json')
-        if self.registry_file_path.is_file():
+        self.index = None
+        self.images = {}
+        try:
             self.load()
-        else:
-            self.create()
+        except:
+            pass
 
     def load(self):
-        tag_list = TagList.from_file(self.registry_file_path)
-        self.images = {}
-        for tag_name in tag_list.get('Tags'):
-            image = Image(self.name, tag_name)
-            image.load()
-            self.images[tag_name] = image
-
-    def create(self):
-        self.images = {}
-        self.save()
+        repositories_path = pathlib.Path(oci.config['global']['path'], 'repositories')
+        index_file_path = repositories_path.joinpath(self.name + '.json')
+        self.index = Index.from_file(index_file_path)
+        for manifest_descriptor in self.index.get('Manifests'):
+            manifest_annotations = manifest_descriptor.get('Annotations')
+            manifest_tag = manifest_annotations.get('org.opencontainers.image.ref.name', None)
+            manifest_descriptor_digest = manifest_descriptor.get('Digest')
+            manifest_id = manifest_descriptor_digest.encoded()
+            image = Image(self.name, manifest_tag, manifest_id)
+            if image is not None:
+                self.images[image.tag] = image
 
     def save(self):
-        if not self.path.is_dir():
-            self.path.mkdir(parents=True)
-        tag_list_json = {
-            'name': self.name,
-            'tags': list(self.images.keys())
-        }
-        tag_list = TagList.from_json(tag_list_json)
-        tag_list.save(self.registry_file_path)
+        if self.index is None:
+            raise Exception('Can not save repository (%s), it is not initialized' % self.name)
+        repositories_path = pathlib.Path(oci.config['global']['path'], 'repositories')
+        if not repositories_path.is_dir():
+            repositories_path.mkdir(parents=True)
+        index_file_path = repositories_path.joinpath(self.name + '.json')
+        self.index.save(index_file_path)
+        oci_layout_file_path = repositories_path.joinpath('oci-layout')
+        if not oci_layout_file_path.is_file():
+            oci_layout = ImageLayout(version='1.0.0')
+            oci_layout.save(oci_layout_file_path)
 
-    def create_image(self, tag_name, rootfs_tar_file, config_json):
-        image = self.images.get(tag_name, None)
-        if image is not None:
-            raise Exception('Image (%s:%s) already exists, can not create'
-                % (self.name, tag_name))
-        image = Image(self.name, tag_name)
-        self.images[tag_name] = image
-        self.save()
-        image.create(rootfs_tar_file, config_json)
+    def get_image(self, tag):
+        image = self.images.get(tag, None)
+        if image is None:
+            raise Exception('Image (%s) does not exist in this repository' % tag)
         return image
 
-    def destroy_image(self, tag_name):
-        image = self.images.get(tag_name, None)
-        if image is None:
-            raise Exception('Image tagged (%s) does not exist' % tag_name)
-        image.destroy()
-        del self.images[tag_name]
-        if len(self.images) == 0:
-            rm(self.registry_file_path)
-            rm(self.path)
-            return None
-        else:
-            self.save()
-        return self
+    def create_image(self, tag, rootfs_tar_path, config_json):
+        image = self.images.get(tag, None)
+        if image is not None:
+            raise Exception('Image tag (%s) already exist' % tag)
+        image = Image(self.name, tag)
+        manifest_descriptor = image.create(rootfs_tar_path, config_json)
+        self.images[tag] = image
+        if self.index is None:
+            self.index = Index(
+                manifests=[manifest_descriptor]
+            )
+        else: 
+            manifests = self.index.get('Manifests')
+            manifests.append(manifest_descriptor)
+        self.save()
+        return image        
+
+    def remove(self):
+        if len(self.images) != 0:
+            raise Exception('There are (%d) images in the repository (%s), can not remove' 
+                % (len(self.images), self.name))
+        self.images = None
+        self.index = None
+        repositories_path = pathlib.Path(oci.config['global']['path'], 'repositories')
+        index_file_path = repositories_path.joinpath(self.name + '.json')
+        rm(index_file_path)
+
+    def remove_image(self, tag):
+        image = self.get_image(tag)
+        manifest_digest = id_to_digest(image.id)
+        image.remove()
+        del self.images[tag]
+        if self.index is None:
+            raise Exception('Can not remove image from repository (%s)' % self.name)
+        manifests = self.index.get('Manifests')
+        for index, manifest_descriptor in enumerate(manifests):
+            if manifest_descriptor.get('Digest') == manifest_digest:
+                manifests.pop(index)
+                break
+        if len(manifests) == 0:
+            self.remove()
+            return
+        self.save()

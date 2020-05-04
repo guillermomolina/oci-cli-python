@@ -1,10 +1,21 @@
 # Change log for Solaris OCI
 
-## XXXX-XX-XX: Version 0.0.6
+## XXXX-XX-XX: Version 0.0.X
 
 - TODO "oci image load"
 - TODO "oci image save"
 - TODO "oci image import"
+
+
+## XXXX-XX-XX: Version 0.0.7
+
+- Added the runtime engine
+- Added "oci container create"
+
+
+## 2020-05-04: Version 0.0.6
+
+- Restructure /var/lib/oci layout
 
 
 ## 2020-04-28: Version 0.0.5

@@ -18,11 +18,13 @@ import pathlib
 
 from .list import List
 from .run import Run
+from .create import Create
 
 class Container:
     commands = {
         'ls': List,
-        'run': Run
+        'run': Run,
+        'create': Create
     }
 
     @staticmethod

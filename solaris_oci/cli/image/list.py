@@ -39,21 +39,20 @@ class List:
         database = Distribution() 
         images = []
         for repository in database.repositories.values():
-            for tag in repository.images.values():
-                for manifest in tag.manifests:
-                    config = manifest['config']
-                    image = {}
-                    image['registry'] = tag.repository
-                    image['tag'] = tag.tag
-                    if options.digests:
-                        image['digest'] = tag.digest
-                    image_id = tag.id
-                    if not options.no_trunc:
-                        image_id = image_id.split(':')[1][0:12]
-                    image['image id'] = image_id
-                    image['created'] = config.get('Created')
-                    image['size'] = humanize.naturalsize(tag.size)
-                    self.insert_image(images, image)
+            for image in repository.images.values():
+                config = image.config
+                data = {}
+                data['registry'] = image.repository
+                data['tag'] = image.tag
+                if options.digests:
+                    data['digest'] = image.digest
+                image_id = image.id
+                if not options.no_trunc:
+                    image_id = image_id[0:12]
+                data['image id'] = image_id
+                data['created'] = config.get('Created')
+                data['size'] = humanize.naturalsize(image.size)
+                self.insert_image(images, data)
         for image in images:
             image['created'] = humanize.naturaltime(datetime.now(tz=timezone.utc) - image['created'])
         print_table(images)

@@ -12,17 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-import secrets
-
-def generate_random_sha256():
-    return secrets.token_hex(nbytes=32)
-
-def generate_random_id():
-    return secrets.token_hex(nbytes=8)
-
-def digest_to_id(digest):
-    return digest.split(':')[1]
-
-def id_to_digest(id):
-    return 'sha256:' + id 
+from .runtime import Runtime

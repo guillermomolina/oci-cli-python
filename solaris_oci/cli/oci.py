@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 import argparse
 import importlib
 
@@ -59,6 +60,7 @@ class OCI:
         if options.debug:
             import ptvsd
             ptvsd.enable_attach()
+            print("Waiting for IDE to attach...")
             ptvsd.wait_for_attach()
 
         command = OCI.commands[options.command]

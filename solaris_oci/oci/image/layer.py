@@ -14,49 +14,88 @@
 
 import json
 import pathlib
+from opencontainers.image.v1 import MediaTypeImageLayerNonDistributableGzip, \
+    MediaTypeImageLayerNonDistributableZfsXZ, \
+    MediaTypeImageLayerNonDistributableZfs, Descriptor
 from solaris_oci import oci
-from solaris_oci.util.file import untar, sha256sum
+from solaris_oci.util import digest_to_id, id_to_digest
+from solaris_oci.util.file import compress, sha256sum, rm
 
 class Layer:
-    def __init__(self, image_digest, digest=None, parent=None):
-        self.image_id = image_digest.split(':')[1]
-        self.parent_id = None
-        if parent is not None:
-            self.parent_id = parent.id
-        self.id = None
-        if digest is not None:
-            self.id = digest.split(':')[1]
-        self.path = None
+    def __init__(self, diff_id=None, id=None, parent=None):
+        self.diff_id = diff_id
+        self.id = id
+        self.parent = parent
 
     @property
-    def digest(self):
-        return 'sha256:' + self.id
+    def diff_digest(self):
+        return id_to_digest(self.diff_id)
 
     @property
     def size(self):
-        return oci.graph_driver.get_layer_size(self.image_id, self.id)
+        if self.diff_id is not None:
+            return oci.graph_driver.size(self.diff_id)
+        return None
 
-    def create(self):
-        self.id = oci.graph_driver.create_layer(self.image_id, self.parent_id)
-        layers_path = pathlib.Path(oci.config['layers']['path'])
-        self.path = layers_path.joinpath('sha256', self.id)
+    @property
+    def path(self):
+        if self.diff_id is not None:
+            return oci.graph_driver.path(self.diff_id)
+        return None
 
-    def destroy(self):
-        oci.graph_driver.destroy_layer(self.image_id, self.id, self.parent_id)
-        self.path = None
+    @property
+    def parent_diff_id(self):
+        if self.parent is not None:
+            return parent.diff_id
+        return None
 
-    def create_archive(self, file_path):
-        oci.graph_driver.save_layer(self.image_id, self.id, file_path)
+    def create_diff(self):
+        if self.diff_id is not None:
+            raise('Layer (%s) already created' % self.diff_id)
+        self.diff_id = oci.graph_driver.create(self.parent_diff_id)
 
-    def commit(self):
-        oci.graph_driver.commit_layer(self.image_id, self.id)
+    def commit_diff(self, compressed=True):
+        oci.graph_driver.commit(self.diff_id)
+        layers_path = pathlib.Path(oci.config['global']['path'], 'layers')
+        if not layers_path.is_dir():
+            layers_path.mkdir(parents=True)
+        # TODO: Move to zfs_driver
+        layer_file_path = layers_path.joinpath('layer.zfs')
+        oci.graph_driver.save(self.diff_id, layer_file_path)
+        media_type=MediaTypeImageLayerNonDistributableZfs
+        if compressed:
+            if compress(layer_file_path, method='xz', parallel=True) != 0:
+                raise Exception('Could not compress layer file (%s)' 
+                    % str(layer_file_path))
+            media_type=MediaTypeImageLayerNonDistributableZfsXZ
+            layer_file_path = layers_path.joinpath('layer.zfs.xz')
+        # End TODO
+        self.id = sha256sum(layer_file_path)
+        if self.id is None:
+            raise Exception('Could not get hash of file %s' % str(layer_file_path))
+        layer_path = layers_path.joinpath(self.id)
+        layer_file_path.rename(layer_path)
+        layer_descriptor = Descriptor(
+            digest=id_to_digest(self.id),
+            size=layer_path.stat().st_size,
+            media_type=media_type,
+        )
+        return layer_descriptor
    
-    def add(self, file_path, destination_path=None):
-        local_destination_path = self.path
-        if destination_path is not None:
-            local_destination_path.joinpath(destination_path)
-        if file_path.suffix == '.tar':
-            untar(file_path, local_destination_path)
-            return
-        raise NotImplementedError()
+    def add_file_to_diff(self, file_path, destination_path=None):
+        if self.diff_id is not None:
+            oci.graph_driver.add_file(self.diff_id, file_path, destination_path)
 
+    def remove_diff(self):
+        if self.diff_id is not None:
+            oci.graph_driver.remove(self.diff_id)
+            self.diff_id = None
+
+    def remove(self):
+        self.remove_diff()
+        if self.id is not None:
+            layer_file_path = pathlib.Path(oci.config['global']['path'], 
+                'layers', self.id)
+            rm(layer_file_path)
+            self.id = None
+       

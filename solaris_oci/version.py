@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__version__ = "0.0.5"
+__version__ = "0.0.6"
 AUTHOR = "Guillermo Adrián Molina"
 AUTHOR_EMAIL = "guillermoadrianmolina@gmail.com"
 NAME = "solaris-oci"

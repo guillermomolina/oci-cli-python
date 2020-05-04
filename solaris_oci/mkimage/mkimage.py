@@ -35,8 +35,8 @@ class MKImage:
         parser.add_argument('-b', '--bundle', 
             help='path to the root of the runc bundle directory',
             default='.')
-        parser.add_argument('-o', '--output', 
-            help='filename of the output tar file (default: stdout)')
+        #parser.add_argument('-o', '--output', 
+        #    help='filename of the output tar file (default: stdout)')
         parser.add_argument('repository_and_tag',
             metavar='REPOSITORY:TAG',
             type=repository_and_tag,
@@ -47,6 +47,7 @@ class MKImage:
         if options.debug:
             import ptvsd
             ptvsd.enable_attach()
+            print("Waiting for IDE to attach...")
             ptvsd.wait_for_attach()
 
         ''' A RunC bundle has a concrete structure 
@@ -78,8 +79,8 @@ create it with "runc -b %s spec"''' %
         if not rootfs_path.is_dir():
             error('rootfs directory (%s) does not exist' % str(rootfs_path))
         repository, tag = options.repository_and_tag
-        if tag in ['latest']:
-            error('Tag name (%s) is reserved and can not be used' % tag)
+        #if tag in ['latest']:
+        #    error('Tag name (%s) is reserved and can not be used' % tag)
 
         try:
             with tempfile.TemporaryDirectory() as tmp_dir_name:
@@ -90,10 +91,10 @@ create it with "runc -b %s spec"''' %
                         % (str(rootfs_tar_path), str(rootfs_path)))
                 distribution = Distribution()
                 image = distribution.create_image(repository, tag, rootfs_tar_path, config_json)
-                tar(image.tag_path.resolve(), options.output)
-        except Exception as e:         
-            print(e.args)
-            raise e
+                #tar(image.tag_path.resolve(), options.output)
+        except Exception as e: 
+            raise e     
+            print('Error, could not create image')   
             exit(-1)
 
 def main():

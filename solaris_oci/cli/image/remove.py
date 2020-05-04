@@ -33,34 +33,18 @@ class Remove:
  
     def __init__(self, options):
         distribution = Distribution()
-        images = self.images(distribution, options.image)
-        for repository, tag in images:
-            distribution.destroy_image(repository, tag)
-
-    def images(self, distribution, filter):
-        repositories = {}
-        for reference in filter:
-            records = reference.split(':')
-            name = records[0]
-            tag = None
-            if len(records) == 2 and len(records[1]) != 0:
-                tag = records[1]
-            tags = repositories.get(name, [])
-            if tag is None:
-                value = None
+        for reference in options.image:
+            name_and_tag = reference.split(':')            
+            if len(name_and_tag) == 1:
+                image_name = name_and_tag[0]
+                tag_name = 'latest'
+            elif len(name_and_tag) == 2:
+                image_name = name_and_tag[0]
+                tag_name = name_and_tag[1]
             else:
-                if tags is None:
-                    value = None
-                else:
-                    tags.append(tag)
-                    value = tags
-            repositories[name] = value
-    
-        images = []
-        for repository in distribution.repositories.values():
-            if repository.name in repositories:
-                tags = repositories[repository.name]
-                for tag in repository.images:
-                    if tags is None or tag in tags:
-                        images.append((repository.name, tag))
-        return images
+                continue
+            try:
+                distribution.remove_image(image_name, tag_name)
+            except Exception as e:
+                raise e
+                print('Could not remove image (%s:%s)' % (image_name, tag_name))

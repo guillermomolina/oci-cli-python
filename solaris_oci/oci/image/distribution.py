@@ -20,34 +20,39 @@ from . import Repository
 
 class Distribution():
     def __init__(self):
-        self.repositories = {}
-        images_path = pathlib.Path(oci.config['images']['path'])
-        self.path = images_path
-        self.registry_file_path = self.path.joinpath('distribution.json')
-        if self.registry_file_path.is_file():
+        self.repositories = None
+        try:
             self.load()
-        else:
+        except:
             self.create()
 
     def load(self):
-        repository_list = RepositoryList.from_file(self.registry_file_path)
+        distribution_path = pathlib.Path(oci.config['global']['path'])
+        distribution_file_path = distribution_path.joinpath('distribution.json')
+        repository_list = RepositoryList.from_file(distribution_file_path)
         self.repositories = {}
         for repository_name in repository_list.get('Repositories'):
             repository = Repository(repository_name)
             self.repositories[repository_name] = repository
 
     def create(self):
+        distribution_file_path = pathlib.Path(oci.config['global']['path'], 
+            'distribution.json')
+        if distribution_file_path.exists():
+            raise Exception('Distribution file (%s) already exists' % distribution_file_path)
         self.repositories = {}
         self.save()
 
     def save(self):
-        if not self.path.is_dir():
-            self.path.mkdir(parents=True)
+        distribution_path = pathlib.Path(oci.config['global']['path'])
+        if not distribution_path.is_dir():
+            distribution_path.mkdir(parents=True)
         repository_list_json = {
             'repositories': list(self.repositories.keys())
         }
         repository_list = RepositoryList.from_json(repository_list_json)
-        repository_list.save(self.registry_file_path)
+        distribution_file_path = distribution_path.joinpath('distribution.json')
+        repository_list.save(distribution_file_path)
 
     def create_image(self, repository_name, tag_name, rootfs_tar_file, config_json):
         repository = self.repositories.get(repository_name, None)
@@ -57,14 +62,19 @@ class Distribution():
             self.save()
         return repository.create_image(tag_name, rootfs_tar_file, config_json)
 
-    def destroy_image(self, repository_name, tag_name):
+    def get_repository(self, repository_name):
         repository = self.repositories.get(repository_name, None)
         if repository is None:
             raise Exception('Repository (%s) does not exist' % repository_name)
-        repository = repository.destroy_image(tag_name)
-        if repository is None:
+        return repository
+
+    def get_image(self, repository_name, tag_name):
+        repository = self.get_repository(repository_name)
+        return repository.get_image(tag_name)
+
+    def remove_image(self, repository_name, tag_name):
+        repository = self.get_repository(repository_name)
+        repository.remove_image(tag_name)
+        if repository.index is None:
             del self.repositories[repository_name]
-        else:
-            # Not really needed
-            self.repositories[repository_name] = repository
-        self.save()
+            self.save()

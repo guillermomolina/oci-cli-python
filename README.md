@@ -69,7 +69,7 @@ $ sudo zfs create -o mountpoint=none -o compress=lz4 rpool/oci
 
 ```
 $ cd ~/container
-$ sudo mkimage -o /tmp/solaris.tar solaris:mytag
+$ sudo mkimage solaris:mytag
 ```
 
 ### List images

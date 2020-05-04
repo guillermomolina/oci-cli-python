@@ -31,43 +31,23 @@ class Inspect:
             help='Name of the image to inspect')
  
     def __init__(self, options):
-        images = self.images(options.image)
-        print(json.dumps(images, indent=4, default=str))
-
-    def images(self, filter):
-        repositories = {}
-        for reference in filter:
-            records = reference.split(':')
-            name = records[0]
-            tag = None
-            if len(records) == 2 and len(records[1]) != 0:
-                tag = records[1]
-            tags = repositories.get(name, [])
-            if tag is None:
-                value = None
-            else:
-                if tags is None:
-                    value = None
-                else:
-                    tags.append(tag)
-                    value = tags
-            repositories[name] = value
-    
         distribution = Distribution()
-        images = []
-        for repository in distribution.repositories.values():
-            if repository.name in repositories:
-                tags = repositories[repository.name]
-                for tag in repository.images.values():
-                    if tags is None or tag.tag in tags:
-                        for manifest in tag.manifests:
-                            image = manifest['config']
-                            image_json = image.to_dict(use_real_name=True)
-                            image_json['RepoTags'] = [ 
-                                tag.repository + ':' + tag.tag 
-                            ]
-                            image_json['RepoDigests'] = [ 
-                                tag.repository + ':' + tag.digest 
-                            ]
-                            images.append(image_json)
-        return images
+        for reference in options.image:
+            name_and_tag = reference.split(':')            
+            if len(name_and_tag) == 1:
+                image_name = name_and_tag[0]
+                tag_name = 'latest'
+            elif len(name_and_tag) == 2:
+                image_name = name_and_tag[0]
+                tag_name = name_and_tag[1]
+            else:
+                continue
+            image = distribution.get_image(image_name, tag_name)
+            image_json = image.config.to_dict(use_real_name=True)
+            image_json['RepoTags'] = [ 
+                image.repository + ':' + image.tag 
+            ]
+            image_json['RepoDigests'] = [ 
+                image.repository + '@' + image.digest 
+            ]
+            print(json.dumps(image_json, indent=4, default=str))
