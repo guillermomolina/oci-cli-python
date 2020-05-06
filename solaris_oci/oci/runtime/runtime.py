@@ -61,9 +61,11 @@ class Runtime():
         container_names = [container.name for container in self.containers.values()]
         return generate_random_name(exclude_list=container_names)
 
-    def create_container(self, image_name, name=None):
+    def create_container(self, image_name, name=None, **kwargs):
+        if 'name' is None:
+            name = self.generate_container_name()
         container = Container()
-        container.create(image_name, name or self.generate_container_name())
+        container.create(image_name, name, **kwargs)
         self.containers[container.id] = container
         self.save()
         return container

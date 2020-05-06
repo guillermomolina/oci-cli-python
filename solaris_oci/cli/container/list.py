@@ -38,7 +38,7 @@ class List:
         containers = []
         for container in runtime.containers.values():
             data = {}
-            container_state = container.state
+            container_state = container.state()
             container_config = container.config
             container_process = container_config.get('Process')
             container_args = container_process.get('Args') or []

@@ -40,3 +40,16 @@ def runc_delete(container_id, force=False):
     if force:
         options = ['--force']
     return runc('delete', options, arguments)
+
+def runc_exec(container_id, command, args=None):
+    raise NotImplementedError()
+    arguments = [container_id, command]
+    options = None
+    if args is not None:
+        arguments += args
+    return runc('exec', options, arguments)
+
+def runc_start(container_id):
+    arguments = [container_id]
+    options = None
+    return runc('start', options, arguments)

@@ -20,7 +20,8 @@ from datetime import datetime, timezone
 from opencontainers.runtime.v1 import Spec, State
 from solaris_oci.oci import oci_config, OCIError
 from solaris_oci.util import generate_random_sha256, digest_to_id, id_to_digest
-from solaris_oci.util.runc import runc_create, runc_delete
+from solaris_oci.util.runc import runc_create, runc_delete, runc_exec, \
+    runc_start
 from solaris_oci.util.file import rm
 from solaris_oci.oci.image import Distribution, Layer
 
@@ -45,11 +46,12 @@ class Container():
                     tz=timezone.utc)
         return None
 
-    @property
     def status(self):
-        return self.state.get('Status')
+        container_state = self.state()
+        if container_state is not None:
+            return container_state.get('Status')
+        return None
 
-    @property
     def state(self):
         if self.id is not None:
             zones_path = pathlib.Path('/var/run/zones/state')
@@ -128,7 +130,7 @@ class Container():
         # return True if we are ok to use it, False otherwise
         return True
 
-    def create(self, image_name, name):
+    def create(self, image_name, name, command=None, workdir=None):
         self.create_time = datetime.utcnow()
         self.load_image(image_name)
         self.name = name
@@ -138,11 +140,11 @@ class Container():
             if self.check_runc_id():
                 break
         self.create_layer()
-        self.create_config()
+        self.create_config(command, workdir)
         self.save()
         self.create_container()
     
-    def create_config(self):
+    def create_config(self, command=None, workdir=None):
         if self.image is None:
             raise OCIError('Could not create config for container (%s), there is no image'
                 % self.id)
@@ -167,9 +169,9 @@ class Container():
                     "uid": 0,
                     "gid": 0
                 },
-                "args": image_config_config.get('Cmd'),
+                "args": command or image_config_config.get('Cmd'),
                 "env": image_config_config.get('Env'),
-                "cwd": image_config_config.get('WorkingDir')
+                "cwd": workdir or image_config_config.get('WorkingDir')
             },
             "root": {
                 "path": str(self.layer.path),
@@ -228,4 +230,18 @@ class Container():
         container_status = self.status
         force = container_status == 'running'
         if runc_delete(self.runc_id, force) != 0:
-            raise OCIError('Could not delete container')
+            pass 
+            #raise OCIError('Could not delete container')
+
+    def exec(self, command, args=None):
+        raise NotImplementedError()
+        if self.runc_id is None:
+            raise OCIError('Container (%s) can not exec commands' % self.id)
+        runc_exec(self.runc_id, command, args)
+
+    def start(self):
+        container_state = self.state()
+        if container_state == 'created' or container_state == 'stopped':
+            raise OCIError('Can not start container (%s) in state (%s)' % 
+                (self.id, container_state))
+        return runc_start(self.runc_id)

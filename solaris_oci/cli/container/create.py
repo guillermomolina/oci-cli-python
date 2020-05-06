@@ -23,18 +23,29 @@ class Create:
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
             description='Create a new container',
             help='Create a new container')
+        parser.add_argument('--name', 
+            help='Assign a name to the container',
+            metavar='string')
+        parser.add_argument('--rm',
+            help='Automatically remove the container when it exits', 
+            action='store_true')
+        parser.add_argument('-w', '--workdir', 
+            help='Working directory inside the container',
+            metavar='string')
         parser.add_argument('image',
             metavar='IMAGE',
             help='Name of the image to base the container on')
         parser.add_argument('cmd',
-            nargs='?',
-            metavar='COMMAND',
+            nargs=argparse.REMAINDER,
+            metavar='[COMMAND [ARG [ARG ...]]]',
             help='Command to run')
-        parser.add_argument('argument',
-            nargs='*',
-            metavar='ARG',
-            help='Arguments to the command')
 
     def __init__(self, options):
         runtime = Runtime()
-        runtime.create_container(options.image)
+        container = runtime.create_container(
+            options.image,
+            name=options.name, 
+            command=options.cmd,
+            workdir=options.workdir)
+        '''if options.rm:
+            runtime.remove(container.id)'''

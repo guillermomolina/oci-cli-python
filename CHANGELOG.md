@@ -1,11 +1,10 @@
 # Change log for Solaris OCI
 
-## XXXX-XX-XX: Version X.X.X
 
-- TODO "oci image load"
-- TODO "oci image save"
-- TODO "oci image import"
-- TODO "oci container run"
+## 2020-05-06: Version 0.1.1
+
+- Added "oci container run"
+- Added "oci container start"
 
 
 ## 2020-05-06: Version 0.1.0
