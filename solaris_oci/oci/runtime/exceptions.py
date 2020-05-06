@@ -12,12 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from solaris_oci.oci import OCIException
 
-from .random import generate_random_sha256, generate_random_id, \
-    generate_random_name
-
-def digest_to_id(digest):
-    return digest.split(':')[1]
-
-def id_to_digest(id):
-    return 'sha256:' + id 
+class ContainerInUse(OCIException):
+    pass

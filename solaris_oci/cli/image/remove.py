@@ -15,6 +15,7 @@
 
 import json
 import argparse
+from solaris_oci.oci import OCIError
 from solaris_oci.oci.image import Distribution
 
 class Remove:
@@ -33,18 +34,9 @@ class Remove:
  
     def __init__(self, options):
         distribution = Distribution()
-        for reference in options.image:
-            name_and_tag = reference.split(':')            
-            if len(name_and_tag) == 1:
-                image_name = name_and_tag[0]
-                tag_name = 'latest'
-            elif len(name_and_tag) == 2:
-                image_name = name_and_tag[0]
-                tag_name = name_and_tag[1]
-            else:
-                continue
+        for image_name in options.image:
             try:
-                distribution.remove_image(image_name, tag_name)
-            except Exception as e:
+                distribution.remove_image(image_name)
+            except OCIError as e:
                 raise e
-                print('Could not remove image (%s:%s)' % (image_name, tag_name))
+                print('Could not remove image (%s)' % image_name)

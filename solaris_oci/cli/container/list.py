@@ -15,6 +15,10 @@
 import subprocess
 import argparse
 import pathlib
+import humanize
+from datetime import datetime, timezone
+from solaris_oci.util.print import print_table
+from solaris_oci.oci.runtime import Runtime
 
 class List:
     @staticmethod
@@ -25,6 +29,35 @@ class List:
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
             description='List containers',
             help='List containers')
+        parser.add_argument('--no-trunc',
+            help='Don\'t truncate output', 
+            action='store_true')
 
     def __init__(self, options):
-        pass
+        runtime = Runtime() 
+        containers = []
+        for container in runtime.containers.values():
+            data = {}
+            container_state = container.state
+            container_config = container.config
+            container_process = container_config.get('Process')
+            container_args = container_process.get('Args') or []
+            if options.no_trunc:
+                data['container id'] = container.id
+            else:
+                data['container id'] = container.id[:12]
+            data['image'] = container.image.name            
+            data['command'] = ' '.join(container_args)
+            data['created'] = humanize.naturaltime(datetime.now(tz=timezone.utc) - 
+                container.create_time)
+            container_status = container_state.get('Status').capitalize()
+            container_state_change_time = container.state_change_time
+            if container_state_change_time is not None:
+                container_status += ' ' + humanize.naturaldelta(
+                    datetime.now(tz=timezone.utc) - 
+                    container.state_change_time)
+            data['status'] = container_status
+            data['ports'] = ''
+            data['names'] = container.name or ''
+            containers.append(data)
+        print_table(containers)

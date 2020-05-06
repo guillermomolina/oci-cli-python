@@ -15,7 +15,7 @@
 import json
 import pathlib
 from opencontainers.image.v1 import Index, ImageLayout
-from solaris_oci import oci
+from solaris_oci.oci import oci_config, OCIError
 from solaris_oci.util import id_to_digest
 from solaris_oci.util.file import rm
 from .image import Image
@@ -31,7 +31,7 @@ class Repository():
             pass
 
     def load(self):
-        repositories_path = pathlib.Path(oci.config['global']['path'], 'repositories')
+        repositories_path = pathlib.Path(oci_config['global']['path'], 'repositories')
         index_file_path = repositories_path.joinpath(self.name + '.json')
         self.index = Index.from_file(index_file_path)
         for manifest_descriptor in self.index.get('Manifests'):
@@ -39,14 +39,15 @@ class Repository():
             manifest_tag = manifest_annotations.get('org.opencontainers.image.ref.name', None)
             manifest_descriptor_digest = manifest_descriptor.get('Digest')
             manifest_id = manifest_descriptor_digest.encoded()
-            image = Image(self.name, manifest_tag, manifest_id)
+            image = Image(self.name, manifest_tag)
+            image.load(manifest_id)
             if image is not None:
                 self.images[image.tag] = image
 
     def save(self):
         if self.index is None:
-            raise Exception('Can not save repository (%s), it is not initialized' % self.name)
-        repositories_path = pathlib.Path(oci.config['global']['path'], 'repositories')
+            raise OCIError('Can not save repository (%s), it is not initialized' % self.name)
+        repositories_path = pathlib.Path(oci_config['global']['path'], 'repositories')
         if not repositories_path.is_dir():
             repositories_path.mkdir(parents=True)
         index_file_path = repositories_path.joinpath(self.name + '.json')
@@ -56,16 +57,26 @@ class Repository():
             oci_layout = ImageLayout(version='1.0.0')
             oci_layout.save(oci_layout_file_path)
 
+    def remove(self):
+        if len(self.images) != 0:
+            raise OCIError('There are (%d) images in the repository (%s), can not remove' 
+                % (len(self.images), self.name))
+        self.images = None
+        self.index = None
+        repositories_path = pathlib.Path(oci_config['global']['path'], 'repositories')
+        index_file_path = repositories_path.joinpath(self.name + '.json')
+        rm(index_file_path)
+
     def get_image(self, tag):
-        image = self.images.get(tag, None)
-        if image is None:
-            raise Exception('Image (%s) does not exist in this repository' % tag)
-        return image
+        try:
+            return self.images[tag]
+        except:
+            raise OCIError('Image (%s) does not exist in this repository' % tag)
 
     def create_image(self, tag, rootfs_tar_path, config_json):
         image = self.images.get(tag, None)
         if image is not None:
-            raise Exception('Image tag (%s) already exist' % tag)
+            raise OCIError('Image tag (%s) already exist' % tag)
         image = Image(self.name, tag)
         manifest_descriptor = image.create(rootfs_tar_path, config_json)
         self.images[tag] = image
@@ -79,23 +90,13 @@ class Repository():
         self.save()
         return image        
 
-    def remove(self):
-        if len(self.images) != 0:
-            raise Exception('There are (%d) images in the repository (%s), can not remove' 
-                % (len(self.images), self.name))
-        self.images = None
-        self.index = None
-        repositories_path = pathlib.Path(oci.config['global']['path'], 'repositories')
-        index_file_path = repositories_path.joinpath(self.name + '.json')
-        rm(index_file_path)
-
     def remove_image(self, tag):
         image = self.get_image(tag)
         manifest_digest = id_to_digest(image.id)
         image.remove()
         del self.images[tag]
         if self.index is None:
-            raise Exception('Can not remove image from repository (%s)' % self.name)
+            raise OCIError('Can not remove image from repository (%s)' % self.name)
         manifests = self.index.get('Manifests')
         for index, manifest_descriptor in enumerate(manifests):
             if manifest_descriptor.get('Digest') == manifest_digest:

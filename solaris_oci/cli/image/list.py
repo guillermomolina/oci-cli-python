@@ -15,7 +15,6 @@
 import argparse
 import humanize
 from datetime import datetime, timezone
-
 from solaris_oci.util.print import print_table
 from solaris_oci.oci.image import Distribution
 
@@ -48,7 +47,7 @@ class List:
                     data['digest'] = image.digest
                 image_id = image.id
                 if not options.no_trunc:
-                    image_id = image_id[0:12]
+                    image_id = image_id[:12]
                 data['image id'] = image_id
                 data['created'] = config.get('Created')
                 data['size'] = humanize.naturalsize(image.size)

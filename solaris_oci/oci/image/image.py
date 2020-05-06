@@ -20,21 +20,29 @@ from datetime import datetime
 from opencontainers.image.v1 import ImageConfig, Descriptor, \
     RootFS, History, Manifest, Image as Config, MediaTypeImageConfig, \
     MediaTypeImageManifest
-from solaris_oci import oci
+from solaris_oci.oci import oci_config, OCIError
 from solaris_oci.util import digest_to_id, id_to_digest
 from solaris_oci.util.file import rm
 from .layer import Layer
+from .exceptions import ImageInUseException
 
 class Image():
-    def __init__(self, repository, tag, id=None):
+    def __init__(self, repository, tag):
         self.repository = repository
         self.tag = tag
-        self.id = id
+        self.manifest_id = None
         self.manifest = None
         self.layers = None
         self.history = None
         self.config = None
-        self.load()
+
+    @property
+    def id(self):
+        return self.manifest_id
+
+    @property
+    def name(self):
+        return '%s:%s' % (self.repository, self.tag)
 
     @property
     def size(self):
@@ -49,27 +57,32 @@ class Image():
             return self.layers[-1].diff_digest
         return None
 
-    def load(self):
-        if self.manifest is None and self.id is not None:
-            manifest_file_path = pathlib.Path(oci.config['global']['path'], 'manifests', self.id)
-            self.manifest = Manifest.from_file(manifest_file_path)
-            self.load_config()
+    def top_layer(self):
+        if self.layers is not None:
+            return self.layers[-1]
+        return None
+
+    def load(self, manifest_id):
+        manifest_file_path = pathlib.Path(oci_config['global']['path'], 'manifests', manifest_id)
+        self.manifest = Manifest.from_file(manifest_file_path)
+        self.load_config()
+        self.manifest_id = manifest_id
 
     def load_config(self):
         if self.manifest is None:
-            raise Exception('Image (%s:%s) has no manifest' % (self.repository, self.tag))
+            raise OCIError('Image (%s) has no manifest' % self.name)
         config_descriptor = self.manifest.get('Config')
         config_descriptor_digest = config_descriptor.get('Digest')
         config_id = config_descriptor_digest.encoded()
-        config_file_path = pathlib.Path(oci.config['global']['path'], 'configs', config_id)
+        config_file_path = pathlib.Path(oci_config['global']['path'], 'configs', config_id)
         self.config = Config.from_file(config_file_path)
         self.load_layers()
 
     def load_layers(self):
         if self.config is None:
-            raise Exception('Image (%s:%s) has no config' % (self.repository, self.tag))
+            raise OCIError('Image (%s) has no config' % self.name)
         if self.manifest is None:
-            raise Exception('Image (%s:%s) has no manifest' % (self.repository, self.tag))
+            raise OCIError('Image (%s) has no manifest' % self.name)
         root_fs = self.config.get('RootFS')
         diff_ids = [
             digest_to_id(diff_digest)
@@ -85,8 +98,8 @@ class Image():
         ]
 
     def create(self, rootfs_tar_path, config_file):
-        if self.id is not None:
-            raise Exception('Image (%s) already exists' % self.id)
+        if self.manifest is not None:
+            raise OCIError('Image (%s) already exists' % self.name)
         manifest_descriptor = self.create_manifest(rootfs_tar_path, config_file)
         return manifest_descriptor
 
@@ -99,12 +112,12 @@ class Image():
         )
         manifest_json = self.manifest.to_json(compact=True).encode()
         manifest_id = hashlib.sha256(manifest_json).hexdigest()
-        self.id = manifest_id
-        manifests_path = pathlib.Path(oci.config['global']['path'], 'manifests')
+        manifests_path = pathlib.Path(oci_config['global']['path'], 'manifests')
         if not manifests_path.is_dir():
             manifests_path.mkdir(parents=True)
         manifest_file_path = manifests_path.joinpath(manifest_id)
         manifest_file_path.write_bytes(manifest_json)
+        self.manifest_id = manifest_id
         manifest_descriptor = Descriptor(
             digest=id_to_digest(manifest_id),
             size=len(manifest_json),
@@ -170,7 +183,7 @@ class Image():
         )
         config_json = self.config.to_json(compact=True).encode()
         config_id = hashlib.sha256(config_json).hexdigest()
-        configs_path = pathlib.Path(oci.config['global']['path'], 'configs')
+        configs_path = pathlib.Path(oci_config['global']['path'], 'configs')
         if not configs_path.is_dir():
             configs_path.mkdir(parents=True)
         config_file_path = configs_path.joinpath(config_id)
@@ -184,26 +197,28 @@ class Image():
 
     def remove(self):
         if self.id is None:
-            raise Exception('Image (%s:%s) has no id' % (self.repository, self.tag))
+            raise OCIError('Can not remove image (%s)' % self.name)
+        if self.top_layer().is_parent():
+            raise ImageInUseException()
         self.remove_manifest()
-        self.id = None
+        self.manifest_id = None
 
     def remove_manifest(self):
         if self.manifest is None:
-            raise Exception('Image (%s:%s) has no manifest' % (self.repository, self.tag))
+            raise OCIError('Image (%s) has no manifest' % self.name)
+        if self.manifest_id is None:
+            raise OCIError('Image (%s) has no manifest id' % self.name)
         self.remove_layers()
         self.remove_config()
-        manifest_id = self.id
-        self.id = None
-        manifests_path = pathlib.Path(oci.config['global']['path'], 'manifests')
-        manifest_file_path = manifests_path.joinpath(manifest_id)
+        manifests_path = pathlib.Path(oci_config['global']['path'], 'manifests')
+        manifest_file_path = manifests_path.joinpath(self.manifest_id)
         rm(manifest_file_path)
         self.history = None
         self.manifest = None
 
     def remove_layers(self):
         if self.layers is None:
-            raise Exception('Image (%s:%s) has no layers' % (self.repository, self.tag))
+            raise OCIError('Image (%s) has no layers' % self.name)
         for layer in reversed(self.layers):
             try:
                 layer.remove()
@@ -214,10 +229,10 @@ class Image():
 
     def remove_config(self):
         if self.config is None:
-            raise Exception('Image (%s:%s) has no config' % (self.repository, self.tag))
+            raise OCIError('Image (%s) has no config' % self.name)
         config_descriptor = self.manifest.get('Config')
         config_id = digest_to_id(config_descriptor.get('Digest'))
-        configs_path = pathlib.Path(oci.config['global']['path'], 'configs')
+        configs_path = pathlib.Path(oci_config['global']['path'], 'configs')
         config_file_path = configs_path.joinpath(config_id)
         rm(config_file_path)
         self.config = None

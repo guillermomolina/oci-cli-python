@@ -15,30 +15,28 @@
 
 import json
 import argparse
-from solaris_oci.oci.image import Distribution
+from solaris_oci.oci import OCIError
+from solaris_oci.oci.runtime import Runtime
 
-class Inspect:
+class Remove:
     @staticmethod
     def init_parser(image_subparsers, parent_parser):
-        parser = image_subparsers.add_parser('inspect',
+        parser = image_subparsers.add_parser('rm',
             parents=[parent_parser],
+            aliases=['remove'],
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-            description='Display detailed information on one or more images',
-            help='Display detailed information on one or more images')
-        parser.add_argument('image',
+            description='Remove one or more containers',
+            help='Remove one or more containers')
+        parser.add_argument('container',
             nargs='+', 
-            metavar='IMAGE',
-            help='Name of the image to inspect')
+            metavar='CONTAINER',
+            help='Name of the container to remove')
  
     def __init__(self, options):
-        distribution = Distribution()
-        for image_name in options.image:
-            image = distribution.get_image(image_name)
-            image_json = image.config.to_dict(use_real_name=True)
-            image_json['RepoTags'] = [ 
-                image.name
-            ]
-            image_json['RepoDigests'] = [ 
-                image.repository + '@' + image.digest 
-            ]
-            print(json.dumps(image_json, indent=4, default=str))
+        runtime = Runtime()
+        for container_ref in options.container:
+            try:
+                runtime.remove_container(container_ref)
+            except OCIError as e:
+                raise e
+                print('Could not remove container (%s)' % container_ref)

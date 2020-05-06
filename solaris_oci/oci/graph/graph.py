@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from solaris_oci.oci import OCIError
 from .zfs_driver import ZfsDriver
 
 class Graph:
     @classmethod
     def driver(cls, driver_type='zfs'):
         if driver_type != 'zfs':
-            raise Exception('Unknown driver type (%s)' % driver_type)
+            raise OCIError('Unknown driver type (%s)' % driver_type)
         return ZfsDriver()

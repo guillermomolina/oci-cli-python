@@ -13,5 +13,4 @@
 # limitations under the License.
 
 class Driver:
-    def __init__(self):
-        pass
+    pass

@@ -1,16 +1,22 @@
 # Change log for Solaris OCI
 
-## XXXX-XX-XX: Version 0.0.X
+## XXXX-XX-XX: Version X.X.X
 
 - TODO "oci image load"
 - TODO "oci image save"
 - TODO "oci image import"
+- TODO "oci container run"
 
 
-## XXXX-XX-XX: Version 0.0.7
+## 2020-05-06: Version 0.1.0
 
 - Added the runtime engine
 - Added "oci container create"
+- Added "oci container list"
+- Added "oci container remove"
+- Added "oci container inspect"
+- Changed base_id lenght to 12 in ZFS graph driver
+- Changed runc checks on run and create 
 
 
 ## 2020-05-04: Version 0.0.6

@@ -16,13 +16,17 @@ import subprocess
 import argparse
 import pathlib
 
+from .inspect import Inspect
 from .list import List
+from .remove import Remove
 from .run import Run
 from .create import Create
 
 class Container:
     commands = {
+        'inspect': Inspect,
         'ls': List,
+        'rm': Remove,
         'run': Run,
         'create': Create
     }

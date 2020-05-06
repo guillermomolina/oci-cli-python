@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import argparse
-from solaris_oci.oci.image import Distribution
 from solaris_oci.oci.runtime import Runtime
 
 class Create:
@@ -37,19 +36,5 @@ class Create:
             help='Arguments to the command')
 
     def __init__(self, options):
-        distribution = Distribution()
-        repository_name = options.image
-        tag_name = 'latest'
-        if ':' in repository_name:
-            repository_and_tag = repository_name.split(':')
-            repository_name = repository_and_tag[0]
-            tag_name = repository_and_tag[1]
-
-        image = distribution.get_image(repository_name, tag_name)
-        if image is None:
-            print('Image named (%s:%s) does not exist' % 
-                (repository_name, tag_name))
-            exit(-1)
-
         runtime = Runtime()
-        runtime.create_container(image)
+        runtime.create_container(options.image)

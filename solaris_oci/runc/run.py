@@ -55,10 +55,11 @@ class Run:
 
     def __init__(self, options):
         bundle_path = pathlib.Path(options.bundle).resolve()
-        rootfs_path = bundle_path.joinpath('rootfs')
-        if not rootfs_path.is_dir():
-            print('rootfs (%s) does not exist' % str(rootfs_path))
+        config_file_path = bundle_path.joinpath('config.json')
+        if not config_file_path.is_file():
+            print('Index file (%s) does not exist' % str(config_file_path))
             exit(1)
+        rootfs_path = bundle_path.joinpath('rootfs')
         cmd = [options.runz, 'run', options.container_id, str(bundle_path)]
         if options.debug:
             print('running: ' + ' '.join(cmd))

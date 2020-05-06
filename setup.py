@@ -86,7 +86,7 @@ if __name__ == "__main__":
                 'mkimage = solaris_oci.mkimage.mkimage:main',
                 'mkrepo = solaris_oci.mkrepo.mkrepo:main',
                 'mkrootfs = solaris_oci.mkrootfs.mkrootfs:main',
-                'oci = solaris_oci.cli.oci:main'
+                'oci = solaris_oci.cli.cli:main'
             ]
         },
         classifiers=[

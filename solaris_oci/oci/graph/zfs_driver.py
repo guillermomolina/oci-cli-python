@@ -62,32 +62,26 @@
 '''
 
 import pathlib
-from solaris_oci import oci
+from solaris_oci.oci import oci_config, OCIError
 from solaris_oci.util import generate_random_sha256
 from solaris_oci.util.zfs import zfs_create, zfs_get, zfs_set, zfs_snapshot, \
-    zfs_send, zfs_destroy, zfs_is_snapshot, zfs_is_filesystem, zfs_list
+    zfs_send, zfs_destroy, zfs_is_snapshot, zfs_is_filesystem, zfs_list, zfs_clone
 from solaris_oci.util.file import tar, du, rm, untar
 from .driver import Driver
-
-def id_from_zfs(filesystem):
-    if filesystem is not None:
-        splitted = filesystem.split('/')[-1]
-        if len(splitted) >= 2:
-            return splitted[-1]
-    return None
+from .exceptions import NodeInUseException
 
 class ZfsDriver(Driver):
     def __init__(self):
         super().__init__()
         self.filesystems = {}
-        self.driver_path = pathlib.Path(oci.config['global']['path'], 'zfs')
+        self.driver_path = pathlib.Path(oci_config['global']['path'], 'zfs')
         if not self.driver_path.is_dir():
             self.driver_path.mkdir(parents=True)
-        self.root_zfs = oci.config['graph']['zfs']['filesystem']
-        if not zfs_is_filesystem(self.root_zfs):         
+        self.root_zfs = oci_config['graph']['zfs']['filesystem']
+        if not zfs_is_filesystem(self.root_zfs):
             self.root_zfs = zfs_create(self.root_zfs, mountpoint=self.driver_path)
             if self.root_zfs is None:
-                raise Exception('Could not create root zfs (%s)' % root_zfs)   
+                raise OCIError('Could not create root zfs (%s)' % root_zfs)   
         self.load()
     
     def load(self):
@@ -110,11 +104,10 @@ class ZfsDriver(Driver):
             base_zfs = '/'.join(zfs_sections[:-1])
             base_filesystems.add(base_zfs)
             node_id = zfs_sections[node_zfs_section_number]
-            parent_zfs = zfs['origin']
-            parent = None
-            if parent_zfs is not None:
-                parent_id = id_from_zfs(parent_zfs)
-                parent = self.filesystems(parent_id)
+            parent_snapshot = zfs['origin']
+            parent_id = None
+            if parent_snapshot is not None:
+                parent_id = parent_snapshot.split('@')[1]
             node_path = zfs['mountpoint']
             node_size = None
             if node_path is not None:
@@ -125,9 +118,9 @@ class ZfsDriver(Driver):
                 'path': node_path,
                 'size': node_size,
                 'snapshot': None,
+                'base_snapshot': None,
                 'base_zfs': base_zfs,
-                'parent_zfs': parent_zfs,
-                'parent': parent
+                'parent_id': parent_id
             })
         for base_zfs in base_filesystems:
             zfs_snapshots = zfs_list(base_zfs, recursive=True, 
@@ -138,7 +131,8 @@ class ZfsDriver(Driver):
                 if zfs_sections[0] == base_zfs:
                     node_id = zfs_sections[1]
                     zfs_node = self.filesystems[node_id]
-                    zfs_node['snapshot'] = zfs_snapshot_name
+                    zfs_node['base_snapshot'] = zfs_snapshot_name
+                    zfs_node['snapshot'] = zfs_node['zfs'] + '@' + zfs_node['id']
 
     def path(self, node_id):
         return self.filesystems[node_id]['path']
@@ -153,30 +147,33 @@ class ZfsDriver(Driver):
 
     def create(self, parent_id=None):
         node_id = generate_random_sha256()
+        node_path = self.driver_path.joinpath(node_id)
         if parent_id is None:
-            parent = None
-            parent_zfs = None
-            base_id = node_id
+            base_id = node_id[:12]
             # This is the first diff, create the base zfs first:
             base_zfs = zfs_create(base_id, parent=self.root_zfs, mountpoint='none')
             if base_zfs is None:
-                raise Exception('Could not create base zfs (%s/%s)' % (self.root_zfs, base_id))
-            node_path = self.driver_path.joinpath(node_id)
-            node_zize = 0
+                raise OCIError('Could not create base zfs (%s/%s)' % (self.root_zfs, base_id))
+            node_size = 0
             node_zfs = zfs_create(node_id, parent=base_zfs, mountpoint=node_path)
         else:
-            # clone parent
-            NotImplementedError()
+            parent = self.filesystems[parent_id]
+            base_zfs = parent['base_zfs']
+            parent_snapshot = parent['snapshot']
+            parent_size = parent['size']
+            node_size = parent_size
+            node_zfs = zfs_clone(node_id, parent_snapshot, parent=base_zfs, mountpoint=node_path)
         if node_zfs is None:
-            raise Exception('Could not create diff zfs (%s/%s)' % (base_zfs, node_id) )
+            raise OCIError('Could not create diff zfs (%s/%s)' % (base_zfs, node_id) )
         self.filesystems[node_id] = {
             'zfs': node_zfs,
             'id': node_id,
             'path': node_path,
-            'size': node_zize,
+            'size': node_size,
             'snapshot': None,
+            'base_snapshot': None,
             'base_zfs': base_zfs,
-            'parent': parent
+            'parent_id': parent_id
         }
         return node_id
 
@@ -185,38 +182,45 @@ class ZfsDriver(Driver):
         base_zfs = node['base_zfs']
         node_zfs = node['zfs']
         if not zfs_is_filesystem(node_zfs):
-            raise Exception('Layer zfs (%s) does not exist' % node_zfs)
+            raise OCIError('Layer zfs (%s) does not exist' % node_zfs)
         zfs_set(node_zfs, readonly=True)
-        node_snapshot = zfs_snapshot(node_id, base_zfs, recursive=True)
+        base_snapshot = zfs_snapshot(node_id, base_zfs, recursive=True)
+        node['base_snapshot'] = base_snapshot
+        node_snapshot = node_zfs + '@' + node_id
         node['snapshot'] = node_snapshot
         return node_snapshot
 
     def children(self, node_id):
-        return [
+        children = [
             node for node in self.filesystems.values() 
-                if node['parent'] is not None and \
-                    self.filesystems(node['parent']) == node
+                if node['parent_id'] == node_id
         ]
+        return children
+
+    def is_parent(self, node_id):
+        children = self.children(node_id)
+        return len(children) != 0
 
     def save(self, node_id, file_path):
         node = self.filesystems[node_id]
-        node_snapshot = node['snapshot']
-        if not zfs_is_snapshot(node_snapshot):
-            raise Exception('Layer snapshot (%s) does not exist' % node_snapshot)
+        base_snapshot = node['base_snapshot']
+        if not zfs_is_snapshot(base_snapshot):
+            raise OCIError('Layer base snapshot (%s) does not exist' % base_snapshot)
         node_path = node['path']
+        parent_id = node['parent_id']
         if file_path.suffix == '.tar':
-            parent = node['parent']
-            if parent is None:
+            if parent_id is None:
                 if tar(node_path, file_path) != 0:
-                    raise Exception('could not create tar file (%s) from (%s)'
+                    raise OCIError('could not create tar file (%s) from (%s)'
                         % (str(file_path), str(node_path)))
             else:
                 raise NotImplementedError()
         elif file_path.suffix == '.zfs':
-            parent = node['parent']
-            if parent is None:
+            node_snapshot = node['snapshot'] 
+            if parent_id is None:
                 zfs_send(node_snapshot, file_path, recursive=True)
             else:
+                parent = self.filesystems[parent_id]
                 parent_snapshot = parent['snapshot']
                 zfs_send(node_snapshot, file_path, 
                     first_snapshot=parent_snapshot, recursive=True)
@@ -224,22 +228,27 @@ class ZfsDriver(Driver):
             raise NotImplementedError()
 
     def remove(self, node_id):
-        if len(self.children(node_id)) != 0:
-            raise Exception('Can not remove diff id (%s), it has children' % node_id)
+        if self.is_parent(node_id):
+            raise NodeInUseException('Can not remove diff id (%s), it has children' % node_id)
         node = self.filesystems.pop(node_id)
         node_snapshot = node['snapshot']
-        if zfs_destroy(node_snapshot, recursive=True) != 0:
-            raise Exception('Could not destroy snapshot (%s)' % node_snapshot)
+        if node_snapshot is not None:
+            if zfs_destroy(node_snapshot) != 0:
+                raise OCIError('Could not destroy snapshot (%s)' % node_snapshot)
+        base_snapshot = node['base_snapshot']
+        if base_snapshot is not None:
+            if zfs_destroy(base_snapshot) != 0:
+                raise OCIError('Could not destroy base snapshot (%s)' % base_snapshot)
         node_zfs = node['zfs']
         if zfs_destroy(node_zfs) != 0:
-            raise Exception('Could not destroy diff zfs (%s)' % node_zfs)
+            raise OCIError('Could not destroy diff zfs (%s)' % node_zfs)
         node_path = node['path']
         rm(node_path)
-        node_parent = node['parent']
-        if node_parent is None: # remove base zfs
+        parent_id = node['parent_id']
+        if parent_id is None: # remove base zfs
             base_zfs = node['base_zfs']
             if zfs_destroy(base_zfs) != 0:
-                raise Exception('Could not destroy image zfs (%s)' % base_zfs)
+                raise OCIError('Could not destroy image zfs (%s)' % base_zfs)
 
     def add_file(self, node_id, file_path, destination_path=None):
         node = self.filesystems[node_id]

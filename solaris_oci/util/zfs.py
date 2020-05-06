@@ -44,6 +44,22 @@ def zfs_create(zfs_name, parent=None, mountpoint=None):
         return filesystem
     return None
 
+def zfs_clone(zfs_name, snapshot, parent=None, mountpoint=None):
+    filesystem = zfs_name
+    if parent is not None:
+        filesystem = parent + '/' + zfs_name
+
+    # Just debugging, don't fail if already created
+    #if(destroy(filesystem, recursive=True) == 0):
+    #    print('WARNING: Deleting filesystem (%s) ' % filesystem)
+
+    options = None
+    if mountpoint is not None:
+        options = ['mountpoint=' + str(mountpoint)]
+    if zfs('clone', [snapshot, filesystem], options) == 0:
+        return filesystem
+    return None
+
 def zfs_set(zfs_name, readonly=None, mountpoint=None):
     if readonly is not None:
         option = 'readonly='

@@ -13,11 +13,31 @@
 # limitations under the License.
 
 
-from .random import generate_random_sha256, generate_random_id, \
-    generate_random_name
+import secrets
+import random
+from .random_names import left, right
+
+def generate_random_sha256():
+    return secrets.token_hex(nbytes=32)
+
+def generate_random_id():
+    return secrets.token_hex(nbytes=8)
 
 def digest_to_id(digest):
     return digest.split(':')[1]
 
-def id_to_digest(id):
-    return 'sha256:' + id 
+# Based on: https://github.com/moby/moby/blob/master/pkg/namesgenerator/names-generator.go
+def generate_random_name(exclude_list=None):
+	exclude = exclude_list or []
+	exclude.append('boring_wozniak') # Steve Wozniak is not boring
+	retry = 0 
+	while True:
+		name = random.choice(left) + '_' + random.choice(right)
+
+		if retry > 10:
+			name += str(random.randrange(0, retry))
+
+		if name not in exclude:
+			return name
+
+		retry += 1

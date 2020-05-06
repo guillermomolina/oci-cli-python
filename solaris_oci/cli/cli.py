@@ -16,7 +16,7 @@
 import argparse
 import importlib
 
-from solaris_oci.oci import config
+from solaris_oci.oci import oci_config
 from .container import Container
 from .volume import Volume
 from .image import Image
@@ -25,7 +25,7 @@ class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter,
                       argparse.RawDescriptionHelpFormatter):
     pass        
 
-class OCI:
+class CLI:
     commands = {
         'container': Container,
         'volume': Volume,
@@ -45,14 +45,14 @@ class OCI:
         parser.add_argument('--root', 
             help='root directory for storage',
             metavar='string',
-            default=config['images']['path'])
+            default=oci_config['global']['path'])
 
         oci_subparsers = parser.add_subparsers(
             dest='command',
             metavar='COMMAND',
             required=True)
 
-        for command in OCI.commands.values():
+        for command in CLI.commands.values():
             command.init_parser(oci_subparsers)
  
         options = parser.parse_args()
@@ -63,11 +63,11 @@ class OCI:
             print("Waiting for IDE to attach...")
             ptvsd.wait_for_attach()
 
-        command = OCI.commands[options.command]
+        command = CLI.commands[options.command]
         command(options)
 
 def main():
-    OCI()
+    CLI()
 
 if __name__ == '__main__':
     main()

@@ -17,6 +17,7 @@ import subprocess
 import secrets
 import time
 #import shutil
+from solaris_oci.oci import OCIError
 
 def sha256sum(file_path):
     cmd = ['/usr/bin/sha256sum', str(file_path)]
@@ -62,7 +63,7 @@ def compress(file_path, method='gz',
     else:
         cmd = commands.get(method, None)
     if cmd is None:
-        raise Exception('method (%s) not supported' % method)
+        raise OCIError('method (%s) not supported' % method)
 
     if keep_original:
         cmd.append('--keep')
