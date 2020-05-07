@@ -14,12 +14,16 @@
 
 import json
 import pathlib
+import logging
 from solaris_oci.oci import oci_config, OCIError
 from solaris_oci.util import generate_random_name
 from .container import Container
 
+log = logging.getLogger(__name__)
+
 class Runtime():
     def __init__(self):
+        log.debug('Creating instance of %s()' % type(self).__name__)
         self.containers = None
         runtime_path = pathlib.Path(oci_config['global']['path'])
         runtime_file_path = runtime_path.joinpath('runtime.json')

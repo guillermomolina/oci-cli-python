@@ -14,14 +14,18 @@
 
 import json
 import pathlib
+import logging
 from opencontainers.image.v1 import Index, ImageLayout
 from solaris_oci.oci import oci_config, OCIError
 from solaris_oci.util import id_to_digest
 from solaris_oci.util.file import rm
 from .image import Image
 
+log = logging.getLogger(__name__)
+
 class Repository():
     def __init__(self, name):
+        log.debug('Creating instance of %s(%s)' % (type(self).__name__, name))
         self.name = name
         self.index = None
         self.images = {}
@@ -73,12 +77,12 @@ class Repository():
         except:
             raise OCIError('Image (%s) does not exist in this repository' % tag)
 
-    def create_image(self, tag, rootfs_tar_path, config_json):
+    def create_image(self, tag, rootfs_tar_file, image_config):
         image = self.images.get(tag, None)
         if image is not None:
             raise OCIError('Image tag (%s) already exist' % tag)
         image = Image(self.name, tag)
-        manifest_descriptor = image.create(rootfs_tar_path, config_json)
+        manifest_descriptor = image.create(rootfs_tar_file, image_config)
         self.images[tag] = image
         if self.index is None:
             self.index = Index(

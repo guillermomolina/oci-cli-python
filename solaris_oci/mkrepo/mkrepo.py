@@ -19,13 +19,16 @@ import pathlib
 import shutil
 import os
 import re
+import logging
+from solaris_oci.version import __version__
 
-DEBUG=False
-#DEBUG=True
-if DEBUG:
-    import ptvsd
-    ptvsd.enable_attach()
-    ptvsd.wait_for_attach()
+log_levels = {
+    'debug': logging.DEBUG, 
+    'info': logging.INFO, 
+    'warn': logging.WARNING, 
+    'error': logging.ERROR, 
+    'critical': logging.CRITICAL
+}
 
 def get_mogrify_files_path():
     script_path = pathlib.Path(__file__)
@@ -53,6 +56,21 @@ class MKRepo:
         parser = argparse.ArgumentParser(
             formatter_class=CustomFormatter,
             description='''Creates an open container root file system''')
+        parser.add_argument('-v', '--version',
+            help='print the version', 
+            action='version',
+            version='%(prog)s version ' + __version__)
+        parser.add_argument('-l', '--log-level', 
+            help='Set the logging level ("debug"|"info"|"warn"|"error"|"fatal")',
+            choices=[
+                'debug',
+                'info',
+                'warn',
+                'error',
+                'critical'
+            ],
+            metavar='string',
+            default='info')
         parser.add_argument('--debug',
             help='enable debug output for logging', 
             action='store_true')
@@ -70,6 +88,8 @@ class MKRepo:
             help='Name of the package to initialize')
  
         self.options = parser.parse_args()
+
+        logging.basicConfig(level=log_levels[options.log_level])
 
         if 'all' in self.options.packages:
             self.options.packages = self.package_list

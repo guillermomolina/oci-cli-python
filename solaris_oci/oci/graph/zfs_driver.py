@@ -61,7 +61,9 @@
 
 '''
 
+import re
 import pathlib
+import logging
 from solaris_oci.oci import oci_config, OCIError
 from solaris_oci.util import generate_random_sha256
 from solaris_oci.util.zfs import zfs_create, zfs_get, zfs_set, zfs_snapshot, \
@@ -70,27 +72,39 @@ from solaris_oci.util.file import tar, du, rm, untar
 from .driver import Driver
 from .exceptions import NodeInUseException
 
+log = logging.getLogger(__name__)
+
+def is_node_id(node_id):
+    return re.match("^[a-f0-9]{64}(:.+)?$", node_id)
+
+def is_base_id(base_id):
+    return re.match("^[a-f0-9]{12}(:.+)?$", base_id)
+
 class ZfsDriver(Driver):
     def __init__(self):
         super().__init__()
+        log.debug('Creating instance of %s()' % type(self).__name__)
         self.filesystems = {}
         self.driver_path = pathlib.Path(oci_config['global']['path'], 'zfs')
         if not self.driver_path.is_dir():
             self.driver_path.mkdir(parents=True)
         self.root_zfs = oci_config['graph']['zfs']['filesystem']
         if not zfs_is_filesystem(self.root_zfs):
-            self.root_zfs = zfs_create(self.root_zfs, mountpoint=self.driver_path)
+            log.info('Creating root zfs (%s)' % root_zfs)
+            self.root_zfs = zfs_create(self.root_zfs, mountpoint=self.driver_path, 
+                compression=True)
             if self.root_zfs is None:
                 raise OCIError('Could not create root zfs (%s)' % root_zfs)   
         self.load()
     
     def load(self):
+        log.debug('Loading zfs information')
         zfs_filesystems = zfs_list(self.root_zfs, recursive=True,
             properties=['name', 'origin', 'mountpoint'])
         self.filesystems = {}
         root_zfs_sections = self.root_zfs.split('/')
-        base_zfs_section_number = len(root_zfs_sections)
-        node_zfs_section_number = base_zfs_section_number + 1
+        base_id_section_number = len(root_zfs_sections)
+        node_id_section_number = base_id_section_number + 1
         base_filesystems = set()
         for zfs in zfs_filesystems:
             if zfs['name'] == self.root_zfs:
@@ -98,12 +112,17 @@ class ZfsDriver(Driver):
                 continue
             node_zfs = zfs['name']
             zfs_sections = node_zfs.split('/')
-            if len(zfs_sections) == node_zfs_section_number:
+            if len(zfs_sections) == node_id_section_number:
                 # base zfs, go on
+                continue
+            base_id = zfs_sections[base_id_section_number]
+            if not is_base_id(base_id):
                 continue
             base_zfs = '/'.join(zfs_sections[:-1])
             base_filesystems.add(base_zfs)
-            node_id = zfs_sections[node_zfs_section_number]
+            node_id = zfs_sections[node_id_section_number]
+            if not is_node_id(node_id):
+                continue
             parent_snapshot = zfs['origin']
             parent_id = None
             if parent_snapshot is not None:
@@ -130,6 +149,8 @@ class ZfsDriver(Driver):
                 zfs_sections = zfs_snapshot_name.split('@')
                 if zfs_sections[0] == base_zfs:
                     node_id = zfs_sections[1]
+                    if not is_node_id(node_id):
+                        continue
                     zfs_node = self.filesystems[node_id]
                     zfs_node['base_snapshot'] = zfs_snapshot_name
                     zfs_node['snapshot'] = zfs_node['zfs'] + '@' + zfs_node['id']
@@ -256,7 +277,15 @@ class ZfsDriver(Driver):
         if destination_path is not None:
             local_destination_path = local_destination_path.joinpath(destination_path).resolve()
         if file_path.suffix == '.tar':
-            untar(file_path, local_destination_path)
+            untar(local_destination_path, tar_file_path=file_path)
         else:
             raise NotImplementedError()
+        node['size'] = du(node['path'])
+
+    def add_tar_file(self, node_id, tar_file, destination_path=None):
+        node = self.filesystems[node_id]
+        local_destination_path = node['path']
+        if destination_path is not None:
+            local_destination_path = local_destination_path.joinpath(destination_path).resolve()
+        untar(local_destination_path, tar_file=tar_file)
         node['size'] = du(node['path'])

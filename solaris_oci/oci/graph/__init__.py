@@ -14,5 +14,3 @@
 
 from .exceptions import NodeInUseException
 from .graph import Graph
-
-graph_driver = Graph.driver()

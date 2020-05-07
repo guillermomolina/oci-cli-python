@@ -15,6 +15,7 @@
 import json
 import pathlib
 import tempfile
+import logging
 from dateutil import parser
 from datetime import datetime, timezone
 from opencontainers.runtime.v1 import Spec, State
@@ -25,8 +26,11 @@ from solaris_oci.util.runc import runc_create, runc_delete, runc_exec, \
 from solaris_oci.util.file import rm
 from solaris_oci.oci.image import Distribution, Layer
 
+log = logging.getLogger(__name__)
+
 class Container():
     def __init__(self, id=None):
+        log.debug('Creating instance of %s(%s)' % (type(self).__name__, id or ''))
         self.id = id
         self.runc_id = None
         self.name = None 

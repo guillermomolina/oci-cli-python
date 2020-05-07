@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import platform
 
 from .random import generate_random_sha256, generate_random_id, \
     generate_random_name
@@ -21,3 +22,14 @@ def digest_to_id(digest):
 
 def id_to_digest(id):
     return 'sha256:' + id 
+
+
+def architecture():
+    architectures = {
+        'sparc': 'sparc64', 
+        'i386': 'amd64'
+    }
+    return architectures[platform.processor()]
+
+def operating_system():
+    return platform.system()

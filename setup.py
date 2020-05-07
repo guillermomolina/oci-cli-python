@@ -82,11 +82,10 @@ if __name__ == "__main__":
         install_requires=INSTALL_REQUIRES,
         entry_points={
             'console_scripts': [
+                'oci = solaris_oci.cli.cli:main'
                 'runc = solaris_oci.runc.runc:main',
-                'mkimage = solaris_oci.mkimage.mkimage:main',
                 'mkrepo = solaris_oci.mkrepo.mkrepo:main',
                 'mkrootfs = solaris_oci.mkrootfs.mkrootfs:main',
-                'oci = solaris_oci.cli.cli:main'
             ]
         },
         classifiers=[

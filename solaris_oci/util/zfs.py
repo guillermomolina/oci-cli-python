@@ -15,6 +15,9 @@
 
 import subprocess
 import pathlib
+import logging
+
+log = logging.getLogger(__name__)
 
 def zfs(command,  arguments=None, options=None):
     cmd = ['/usr/sbin/zfs', command]
@@ -23,12 +26,12 @@ def zfs(command,  arguments=None, options=None):
             cmd += ['-o', option]
     if arguments is not None:
         cmd += arguments
-    #print(' '.join(cmd))
     with open('/dev/null', 'w') as dev_null:
+        log.debug('Running command: "' + ' '.join(cmd) + '"')
         return subprocess.call(cmd, stderr=dev_null)
     return -1
 
-def zfs_create(zfs_name, parent=None, mountpoint=None):
+def zfs_create(zfs_name, parent=None, mountpoint=None, compression=False):
     filesystem = zfs_name
     if parent is not None:
         filesystem = parent + '/' + zfs_name
@@ -37,9 +40,13 @@ def zfs_create(zfs_name, parent=None, mountpoint=None):
     #if(destroy(filesystem, recursive=True) == 0):
     #    print('WARNING: Deleting filesystem (%s) ' % filesystem)
 
-    options = None
+    options = []
     if mountpoint is not None:
-        options = ['mountpoint=' + str(mountpoint)]
+        options += ['mountpoint=' + str(mountpoint)]
+    if compression:
+        options.append('compression=lz4')
+    if len(options) == 0:
+        options = None
     if zfs('create', [filesystem], options) == 0:
         return filesystem
     return None
@@ -90,6 +97,7 @@ def zfs_get(zfs_name, property_name):
         raise NotImplementedError()
     cmd = ['/usr/sbin/zfs', 'get', '-Hp', property_name, zfs_name]
     with open('/dev/null', 'w') as dev_null:
+        log.debug('Running command: "' + ' '.join(cmd) + '"')
         output = subprocess.check_output(cmd, stderr=dev_null)
         value = output.decode('utf-8').split('\t')[2]
         return value_convert(property_name, value)
@@ -123,6 +131,7 @@ def zfs_send(last_snapshot, target_file_path, first_snapshot=None, recursive=Fal
     cmd.append(last_snapshot)
     with open('/dev/null', 'w') as dev_null:
         with open(target_file_path,'wb') as target_file:
+            log.debug('Running command: "' + ' '.join(cmd) + ' > ' + str(target_file_path) + '"')
             return subprocess.call(cmd, stdout=target_file, stderr=dev_null)
     return None
 
@@ -141,6 +150,7 @@ def zfs_list(zfs_name=None, zfs_type=None, recursive=False,\
     try:
         with open('/dev/null', 'w') as dev_null:
             filesystems = []
+            log.debug('Running command: "' + ' '.join(cmd) + '"')
             output = subprocess.check_output(cmd, stderr=dev_null)
             for line in output.decode('utf-8').strip().split('\n'):
                 values = line.split('\t')

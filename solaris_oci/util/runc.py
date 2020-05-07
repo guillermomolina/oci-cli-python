@@ -15,6 +15,9 @@
 
 import subprocess
 import pathlib
+import logging
+
+log = logging.getLogger(__name__)
 
 def runc(command,  options=None, arguments=None):
     cmd = ['runc', command]
@@ -22,8 +25,8 @@ def runc(command,  options=None, arguments=None):
         cmd += options
     if arguments is not None:
         cmd += arguments
-    #print(' '.join(cmd))
     with open('/dev/null', 'w') as dev_null:
+        log.debug('Running command: "' + ' '.join(cmd) + '"')
         return subprocess.call(cmd, stderr=dev_null)
     return -1
 
@@ -31,7 +34,7 @@ def runc_create(container_id, bundle_path=None):
     arguments = [container_id]
     options = None
     if bundle_path is not None:
-        options = ['-b', bundle_path]
+        options = ['-b', str(bundle_path)]
     return runc('create', options, arguments)
 
 def runc_delete(container_id, force=False):

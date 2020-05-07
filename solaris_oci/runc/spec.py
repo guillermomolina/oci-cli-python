@@ -15,9 +15,10 @@
 import argparse
 import os.path
 import json
-import platform
 
-#from opencontainers.runtime.v1 import Spec
+from opencontainers.runtime.v1 import  Spec as Config, Platform, Process, \
+    Root, User, Solaris, SolarisAnet, Linux, Windows
+from solaris_oci.util import operating_system, architecture
 
 class Spec:
     @staticmethod
@@ -50,47 +51,56 @@ class Spec:
             print ('File config.json exists. Use -f to overwrite')
             exit(1)
 
-        architectures = {
-            'sparc': 'sparc64', 
-            'i386': 'amd64'
-        }
+        platform_os = operating_system()
+        platform = Platform(
+            os=platform_os,
+            arch=architecture()
+        )
+        process = Process(
+            terminal=True,
+            user=User(
+                uid=0,
+                gid=0
+            ),
+            args=['sh'],
+            env=[
+                'PATH=/usr/sbin:/usr/bin:/sbin:/bin',
+                'TERM=xterm'
+            ],
+            cwd='/'
+        )
+        root = Root(
+            path='rootfs',
+            readonly=False
+        )
 
-        config = {
-            'ociVersion': '1.0.0',
-            'platform': {
-                'os': 'SunOS',
-                'arch': architectures[platform.processor()]
-            },
-            'hostname': 'runc',
-            'process': {
-                'terminal': True,
-                'user': {
-                    'uid': 0,
-                    'gid': 0
-                },
-                'args': [
-                    'sh'
-                ],
-                'env': [
-                    'PATH=/usr/sbin:/usr/bin:/sbin:/bin',
-                    'TERM=xterm'
-                ],
-                'cwd': '/root'
-            },
-            'root': {
-                'path': 'rootfs',
-                'readonly': False
-            },
-            'solaris': {
-                'anet': [
-                    {}
+        if platform_os == Solaris:
+            solaris = Solaris(
+                anet=[
+                    SolarisAnet()
                 ]
-            }
-        }
+            )
+        else:
+            solaris=None
 
-        '''spec = Spec()
-        spec.load(config)
-        if spec.validate():           
-            print (json.dumps(config, indent=8))'''
-        with open(config_path, 'w') as config_file:
-            json.dump(config, config_file, indent=8)
+        if platform_os == 'Linux':
+            linux = Linux()
+        else:
+            linux = None
+
+        if platform_os == 'Windows':
+            windows = Windows()
+        else:
+            windows = None
+
+        config = Config(
+            platform=platform,
+            hostname='runc',
+            process=process,
+            root=root,
+            linux=linux,
+            solaris=solaris,
+            windows=windows
+        )
+
+        config.save(config_path, compact=False)

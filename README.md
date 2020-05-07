@@ -61,11 +61,11 @@ $ du -sh rootfs/
 
 ### Image commands
 
-#### Create an image from container
+#### Create an image from runc bundle
 
 ```
-$ cd ~/container
-$ sudo mkimage solaris
+$ cd ~/container/rootfs
+$ tar cf - . | oci image import -r ../config.json - solaris:small
 ```
 
 #### List images
@@ -73,13 +73,13 @@ $ sudo mkimage solaris
 ```
 $ oci image ls
 REGISTRY   TAG     IMAGE ID       CREATED        SIZE   
-solaris    latest   8556bb25018f   a minute ago   46.0 MB
+solaris    small   8556bb25018f   a minute ago   46.0 MB
 ```
 
 #### Delete an image
 
 ```
-$ oci image rm solaris
+$ oci image rm solaris:small
 ```
 
 

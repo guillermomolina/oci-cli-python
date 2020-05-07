@@ -1,6 +1,15 @@
 # Change log for Solaris OCI
 
 
+## 2020-05-07: Version 0.1.2
+
+- Added log system
+- Added version info to commands
+- Added "oci image import"
+- Removed "mkimage" in favor of "oci image import -r"
+- Added more checks to recognize valid ZFS in ZFS graph driver
+
+
 ## 2020-05-06: Version 0.1.1
 
 - Added "oci container run"

@@ -18,6 +18,16 @@ import subprocess
 import pathlib
 import shutil
 import os
+import logging
+from solaris_oci.version import __version__
+
+log_levels = {
+    'debug': logging.DEBUG, 
+    'info': logging.INFO, 
+    'warn': logging.WARNING, 
+    'error': logging.ERROR, 
+    'critical': logging.CRITICAL
+}
 
 class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter, 
                       argparse.RawDescriptionHelpFormatter):
@@ -33,18 +43,24 @@ class MKRootFS:
         parser = argparse.ArgumentParser(
             formatter_class=CustomFormatter,
             description='''Creates an open container root file system''')
+        parser.add_argument('-v', '--version',
+            help='print the version', 
+            action='version',
+            version='%(prog)s version ' + __version__)
+        parser.add_argument('-l', '--log-level', 
+            help='Set the logging level ("debug"|"info"|"warn"|"error"|"fatal")',
+            choices=[
+                'debug',
+                'info',
+                'warn',
+                'error',
+                'critical'
+            ],
+            metavar='string',
+            default='info')
         parser.add_argument('--debug',
             help='enable debug output for logging', 
             action='store_true')
-        parser.add_argument('--log', 
-            help='set the log file path where internal debug information is written',
-            metavar='value',
-            default='/dev/null')
-        parser.add_argument('--log-format', 
-            help='set the format used by logs',
-            choices=['text', 'json'],
-            default='text',
-            metavar='value')
         parser.add_argument('-f', '--force',
             help='forcibly initializes the rootfs',
             action='store_true')
@@ -61,6 +77,8 @@ class MKRootFS:
  
         self.options = parser.parse_args()
 
+        logging.basicConfig(level=log_levels[options.log_level])
+
         path = pathlib.Path(self.options.path).resolve()
         self.root_path = path.joinpath('rootfs/root')
 
@@ -69,7 +87,7 @@ class MKRootFS:
         self.create_repository_db()
 
         self_assembly_path = self.root_path.joinpath('.SELF-ASSEMBLY-REQUIRED')
-        self_assembly_path.unlink(missing_ok=True)
+        self_assembly_path.unlink()
 
         if self.options.debug:
             print('Done initializing rootfs at: ' + str(self.root_path))

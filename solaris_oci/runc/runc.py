@@ -14,7 +14,7 @@
 
 import argparse
 import importlib
-
+from solaris_oci.version import __version__
 from .create import Create
 from .delete import Delete
 from .kill import Kill
@@ -55,9 +55,13 @@ Where "<container-id>" is your name for the instance of the container that you
 are starting. The name you provide for the container instance must be unique on
 your host. Providing the bundle directory using "-b" is optional. The default
 value for "bundle" is the current directory.''')
-        parser.add_argument('--debug',
+        parser.add_argument('-D', '--debug',
             help='enable debug output for logging', 
             action='store_true')
+        parser.add_argument('-v', '--version',
+            help='print the version', 
+            action='version',
+            version='%(prog)s version ' + __version__ + '\nspec: 1.0.0')
         parser.add_argument('--log', 
             help='set the log file path where internal debug information is written',
             metavar='value',
@@ -96,10 +100,16 @@ value for "bundle" is the current directory.''')
         for command in command_registry.values():
             command.init_parser(command_parser)
  
-        args = parser.parse_args()
+        options = parser.parse_args()
 
-        command = command_registry[args.command]
-        command(args)
+        if options.debug:
+            import ptvsd
+            ptvsd.enable_attach()
+            print("Waiting for IDE to attach...")
+            ptvsd.wait_for_attach()
+
+        command = command_registry[options.command]
+        command(options)
 
 def main():
     RunC()

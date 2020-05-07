@@ -16,18 +16,22 @@ import json
 import pathlib
 import shutil
 import hashlib
+import logging
 from datetime import datetime 
 from opencontainers.image.v1 import ImageConfig, Descriptor, \
     RootFS, History, Manifest, Image as Config, MediaTypeImageConfig, \
     MediaTypeImageManifest
 from solaris_oci.oci import oci_config, OCIError
-from solaris_oci.util import digest_to_id, id_to_digest
+from solaris_oci.util import digest_to_id, id_to_digest, architecture, operating_system
 from solaris_oci.util.file import rm
 from .layer import Layer
 from .exceptions import ImageInUseException
 
+log = logging.getLogger(__name__)
+
 class Image():
     def __init__(self, repository, tag):
+        log.debug('Creating instance of %s(%s, %s)' % (type(self).__name__, repository, tag))
         self.repository = repository
         self.tag = tag
         self.manifest_id = None
@@ -97,15 +101,15 @@ class Image():
                 for diff_id, layer_id in zip(diff_ids, layer_ids) 
         ]
 
-    def create(self, rootfs_tar_path, config_file):
+    def create(self, rootfs_tar_file, image_config):
         if self.manifest is not None:
             raise OCIError('Image (%s) already exists' % self.name)
-        manifest_descriptor = self.create_manifest(rootfs_tar_path, config_file)
+        manifest_descriptor = self.create_manifest(rootfs_tar_file, image_config)
         return manifest_descriptor
 
-    def create_manifest(self, rootfs_tar_path, config_file):
-        layer_descriptor = self.create_layer(rootfs_tar_path)
-        config_descriptor = self.create_config(config_file)
+    def create_manifest(self, rootfs_tar_file, image_config):
+        layer_descriptor = self.create_layer(rootfs_tar_file)
+        config_descriptor = self.create_config(image_config)
         self.manifest = Manifest(
             config=config_descriptor,
             layers=[layer_descriptor]
@@ -126,12 +130,13 @@ class Image():
         )
         return manifest_descriptor
 
-    def create_layer(self, rootfs_tar_path):
+    def create_layer(self, rootfs_tar_file):
         layer = Layer()
         layer.create_diff()
-        self.create_history('/bin/sh -c #(nop) ADD file:%s in / ' % str(rootfs_tar_path))
-        layer.add_file_to_diff(rootfs_tar_path)
+        layer.add_tar_file_to_diff(rootfs_tar_file)
         layer_descriptor = layer.commit_diff()
+        rootfs_tar_sha256 = digest_to_id(layer_descriptor.get('Digest'))
+        self.create_history('/bin/sh -c #(nop) ADD file:%s in / ' % rootfs_tar_sha256)
         if self.layers is None:
             self.layers = [layer]
         else: 
@@ -158,25 +163,13 @@ class Image():
         )
         return root_fs
 
-    def create_config(self, config_json):        
-        process = config_json.get('process', {})
-        command = process.get('args', [ '/bin/sh' ])
-        self.create_history('/bin/sh -c #(nop)  CMD ["%s"]' % ' '.join(command), empty_layer=True)
-        image_config = ImageConfig(
-            #user=None,
-            #ports=None,
-            env=process.get('env', [ 'PATH=/usr/sbin:/usr/bin:/sbin:/bin' ]),
-            #entrypoint=None,
-            cmd=command,
-            #volumes=None,
-            working_dir=process.get('cwd', '/')
-        )
-        platform = config_json.get('platform', {})
+    def create_config(self, image_config):        
+        #self.create_history('/bin/sh -c #(nop)  CMD ["%s"]' % ' '.join(command), empty_layer=True)
         root_fs = self.create_root_fs()
         self.config = Config(
             created=datetime.utcnow(),
-            architecture=platform.get('arch', 'sparc64'),
-            os=platform.get('os', 'SunOS'),
+            architecture=architecture(),
+            os=operating_system(),
             config=image_config,
             rootfs=root_fs,
             history=self.history
