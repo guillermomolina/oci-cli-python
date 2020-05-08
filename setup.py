@@ -24,7 +24,7 @@ def get_lookup():
     '''get version by way of the version file
     '''
     lookup = dict()
-    version_file = os.path.join('solaris_oci', 'version.py')
+    version_file = os.path.join('oci_cli', 'version.py')
     with open(version_file) as filey:
         exec(filey.read(), lookup)
     return lookup
@@ -82,10 +82,7 @@ if __name__ == "__main__":
         install_requires=INSTALL_REQUIRES,
         entry_points={
             'console_scripts': [
-                'oci = solaris_oci.cli.cli:main'
-                'runc = solaris_oci.runc.runc:main',
-                'mkrepo = solaris_oci.mkrepo.mkrepo:main',
-                'mkrootfs = solaris_oci.mkrootfs.mkrootfs:main',
+                'oci = oci_cli.cli:main'
             ]
         },
         classifiers=[
@@ -93,7 +90,7 @@ if __name__ == "__main__":
             'Intended Audience :: Developers',
             'Intended Audience :: System Administrators',
             'License :: OSI Approved :: Apache Software License',
-            'Operating System :: POSIX :: SunOS/Solaris',
+            'Operating System :: Unix',
             'Programming Language :: Python :: 3.7',
             'Topic :: Software Development :: Libraries :: Python Modules',
             'Topic :: System :: Operating System',

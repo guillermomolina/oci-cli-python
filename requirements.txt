@@ -1,3 +1,4 @@
-opencontainers
+oci-spec
+oci-api
 python-dateutil
 humanize

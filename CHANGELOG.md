@@ -1,6 +1,13 @@
 # Change log for Solaris OCI
 
 
+## 2020-05-07: Version 0.1.3
+
+- Refactor project, moved out oci and util to project "oci-api-python"
+- Refactor project, moved out cli, to project "oci-cli-python"
+- Renamed project to oci-cli-python
+
+
 ## 2020-05-07: Version 0.1.2
 
 - Added log system

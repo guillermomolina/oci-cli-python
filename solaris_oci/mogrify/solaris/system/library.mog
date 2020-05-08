@@ -1,9 +1,0 @@
-<transform depend -> set variant.container false>
-<transform depend fmri=pkg:/system/linker@ -> delete variant.container .*>
-<transform depend fmri=pkg:/system/library/math@ -> delete variant.container .*>
-<transform depend fmri=pkg:/system/library/smf@ -> delete variant.container .*>
-<transform depend fmri=pkg:/library/zlib@ -> delete variant.container .*>
-<transform depend fmri=pkg:/system/library/security/crypto@ -> delete variant.container .*>
-<transform depend variant.container=false -> drop>
-
-<transform file dir link hardlink path=.*scsi.* -> drop>
