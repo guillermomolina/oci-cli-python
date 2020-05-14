@@ -45,7 +45,7 @@ class List:
             if options.no_trunc:
                 data['container id'] = container.id
             else:
-                data['container id'] = container.id[:12]
+                data['container id'] = container.small_id
             data['image'] = container.image.name            
             data['command'] = ' '.join(container_args)
             data['created'] = humanize.naturaltime(datetime.now(tz=timezone.utc) - 

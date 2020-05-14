@@ -1,7 +1,13 @@
 # Change log for Solaris OCI
 
+## 2020-05-14: Version 0.2.0
 
-## 2020-05-07: Version 0.1.3
+- Added "oci image save"
+- Added "oci image load"
+- Added "oci image history"
+
+
+## 2020-05-08: Version 0.1.3
 
 - Refactor project, moved out oci and util to project "oci-api-python"
 - Refactor project, moved out cli, to project "oci-cli-python"

@@ -16,12 +16,15 @@ import argparse
 import pathlib
 import logging
 import sys
+import tempfile
+import shutil
+import os
 from urllib.request import urlopen
 from urllib.parse import urlparse
 from oci_spec.image.v1 import ImageConfig
 from oci_spec.runtime.v1 import Spec
 from oci_api import OCIError
-from oci_api.image import Distribution
+from oci_api.image import Distribution, ImageExistsException
 
 log = logging.getLogger(__name__)
 
@@ -47,35 +50,47 @@ class Import:
             help='Name of the repository to import to')
   
     def __init__(self, options):
-        log.debug('Start importing (%s) to (%s)', options.file, options.image)
+        image_name = options.image
+        log.debug('Start importing (%s) to (%s)', options.file, image_name)
         try:
-            if options.file == '-':
-                rootfs_file = sys.stdin
-            else:
-                try:
-                    rootfs_file = urlopen(options.file)
-                except ValueError:
-                    rootfs_file = open(options.file)
-            distribution = Distribution()
-            environment = None
-            command = None
-            working_dir = None
-            if options.runc_config is not None:
-                config_file_path = pathlib.Path(options.runc_config)
-                if not config_file_path.is_file():
-                    OCIError('Runc config file (%s) does not exist' % str(config_file_path))
-                spec = Spec.from_file(config_file_path)
-                process = spec.get('Process')
-                command = process.get('Args')
-                environment = process.get('Env')
-                working_dir = process.get('Cwd')
-            image_config = ImageConfig(
-                env=environment,
-                cmd=command,
-                working_dir=working_dir
-            )
-            image = distribution.create_image(options.image, rootfs_file, image_config)
-        except: 
-            log.exception('Error, could not create image')   
+            with tempfile.TemporaryDirectory() as temp_dir_name:
+                if options.file == '-':
+                    input_file = os.fdopen(sys.stdin.fileno(), 'rb')
+                else:
+                    try:
+                        input_file = urlopen(options.file)
+                    except ValueError:
+                        input_file = open(options.file, 'rb')
+                rootfs_tar_path = pathlib.Path(temp_dir_name, 'rootfs.tar')
+                with rootfs_tar_path.open('wb') as output_file:
+                    log.debug('Start copying (%s) to (%s)', options.file, str(rootfs_tar_path))
+                    shutil.copyfileobj(input_file, output_file)
+                    log.debug('Finish copying (%s) to (%s)', options.file, str(rootfs_tar_path))
+                if rootfs_tar_path.is_file():
+                    distribution = Distribution()
+                    environment = None
+                    command = None
+                    working_dir = None
+                    if options.runc_config is not None:
+                        config_file_path = pathlib.Path(options.runc_config)
+                        if not config_file_path.is_file():
+                            OCIError('Runc config file (%s) does not exist' % str(config_file_path))
+                        spec = Spec.from_file(config_file_path)
+                        process = spec.get('Process')
+                        command = process.get('Args')
+                        environment = process.get('Env')
+                        working_dir = process.get('Cwd')
+                    image_config = ImageConfig(
+                        env=environment,
+                        cmd=command,
+                        working_dir=working_dir
+                    )
+                    image = distribution.import_image(image_name, rootfs_tar_path, image_config)
+        except ImageExistsException:
+            log.error('Image (%s) already exists' % image_name)
             exit(-1)
-        log.debug('Finish importing (%s) to (%s)', options.file, options.image)
+        except:
+            raise e
+            log.error('Could not remove image (%s)' % image_name)
+            exit(-1)
+        log.debug('Finish importing (%s) to (%s)', options.file, image_name)

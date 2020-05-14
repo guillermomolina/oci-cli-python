@@ -39,11 +39,29 @@ $ pip install oci-cli-python
 
 ### Image commands
 
-#### Create an image from runc bundle
+#### Import an image from runc bundle
 
 ```
 $ cd ~/container/rootfs
 $ tar cf - . | oci image import -r ../config.json - solaris:small
+```
+
+#### Save an image to an oci tar file
+
+```
+$ oci image save -o /tmp/solaris_small.tar solaris:small
+```
+
+#### Delete an image
+
+```
+$ oci image rm solaris:small
+```
+
+#### Load an image from an oci tar file
+
+```
+$ sudo oci image load -i /tmp/solaris_small.tar solaris:small
 ```
 
 #### List images
@@ -52,12 +70,6 @@ $ tar cf - . | oci image import -r ../config.json - solaris:small
 $ oci image ls
 REGISTRY   TAG     IMAGE ID       CREATED        SIZE   
 solaris    small   8556bb25018f   a minute ago   46.0 MB
-```
-
-#### Delete an image
-
-```
-$ oci image rm solaris:small
 ```
 
 

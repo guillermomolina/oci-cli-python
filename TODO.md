@@ -1,4 +1,6 @@
 # Todo list for OCI CLI
 
-- TODO "oci image load"
-- TODO "oci image save"
+- Add "oci image tag"
+- Add "oci image push"
+- Add "oci image pull"
+

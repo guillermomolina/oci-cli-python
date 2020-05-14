@@ -13,10 +13,12 @@
 # limitations under the License.
 
 
-import json
 import argparse
+import logging
 from oci_api import OCIError
-from oci_api.runtime import Runtime
+from oci_api.runtime import Runtime, ContainerUnknownException
+
+log = logging.getLogger(__name__)
 
 class Remove:
     @staticmethod
@@ -37,6 +39,10 @@ class Remove:
         for container_ref in options.container:
             try:
                 runtime.remove_container(container_ref)
+            except ContainerUnknownException:
+                log.error('Container (%s) does not exist' % container_ref)
+                exit(-1)
             except OCIError as e:
                 raise e
-                print('Could not remove container (%s)' % container_ref)
+                log.error('Could not remove container (%s)' % container_ref)
+                exit(-1)

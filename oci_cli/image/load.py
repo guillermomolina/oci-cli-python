@@ -12,11 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import subprocess
 import argparse
 import pathlib
+import tempfile
+import sys
+import logging
+from oci_api import OCIError
+from oci_api.image import Distribution, ImageExistsException
+from oci_api.util.file import untar
 
-from oci_api.image import Distribution
+log = logging.getLogger(__name__)
 
 class Load:
     @staticmethod
@@ -24,19 +29,40 @@ class Load:
         parser = image_subparsers.add_parser('load',
             parents=[parent_parser],
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-            description='Import the contents from a tarball to create a filesystem image',
-            help='Import the contents from a tarball')
-        parser.add_argument('-m', '--message', 
-            help='Set commit message for imported image',
+            description='Load an image from a tar archive or STDIN',
+            help='Load an image from a tar archive or STDIN')
+        parser.add_argument('-i', '--input', 
+            help='Read from tar archive file',
+            default='STDIN',
             metavar='string')
-        parser.add_argument('file',
-            metavar='file|URL|-',
-            help='Name of the file or URL to import, or "-" for the standard input')
-        parser.add_argument('repository',
-            metavar='REPOSITORY[:TAG]',
-            nargs='?',
-            help='Name of the repository to import to')
+        parser.add_argument('image',
+            metavar='IMAGE',
+            help='Name of the image to load')
   
     def __init__(self, options):
-        distribution = Distribution() 
-            
+        image_name = options.image
+        try:
+            with tempfile.TemporaryDirectory() as tmp_dir_name:
+                tmp_dir_path = pathlib.Path(tmp_dir_name)
+                input_file = sys.stdin
+                if options.input != 'STDIN':
+                    input_file = open(options.input, 'rb')
+                log.debug('Receiving tar from %s' % options.input)
+                untar(tmp_dir_path, tar_file=input_file)
+                oci_file_paths = list(tmp_dir_path.glob('**/oci-layout'))
+                if len(oci_file_paths) == 0:
+                    raise OCIError('There is no oci-layout file in (%s)' % str(tmp_dir_path))
+                if len(oci_file_paths) > 1:
+                    log.warn('There are (%d) images in (%s), can only load (1)' %
+                        (len(oci_file_paths), str(tmp_dir_path)))
+                oci_file_path = oci_file_paths[0]
+                repository_layout_path = oci_file_path.parent
+                distribution = Distribution()
+                distribution.load_image(image_name, repository_layout_path)
+        except ImageExistsException:
+            log.error('Image (%s) already exists' % image_name)
+            exit(-1)
+        except Exception as e:
+            raise e
+            log.error('Could not remove image (%s)' % image_name)
+            exit(-1)

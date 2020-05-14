@@ -13,7 +13,11 @@
 # limitations under the License.
 
 import argparse
-from oci_api.runtime import Runtime
+import logging
+from oci_api import OCIError
+from oci_api.runtime import Runtime, ContainerUnknownException
+
+log = logging.getLogger(__name__)
 
 class Start:
     @staticmethod
@@ -31,5 +35,13 @@ class Start:
     def __init__(self, options):
         runtime = Runtime()
         for container_ref in options.container:
-            container = runtime.get_container(container_ref)
-            container.start()
+            try:
+                container = runtime.get_container(container_ref)
+                container.start()
+            except ContainerUnknownException:
+                log.error('Container (%s) does not exist' % container_ref)
+                exit(-1)
+            except OCIError as e:
+                raise e
+                log.error('Could not start container (%s)' % container_ref)
+                exit(-1)

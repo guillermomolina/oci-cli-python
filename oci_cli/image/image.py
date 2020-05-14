@@ -16,6 +16,7 @@ import subprocess
 import argparse
 import pathlib
 
+from .history import History
 from .import_ import Import
 from .inspect import Inspect
 from .list import List
@@ -30,6 +31,7 @@ tag -> index
 
 class Image:
     commands = {
+        'history': History,
         'import': Import,
         'inspect': Inspect,
         'load': Load,

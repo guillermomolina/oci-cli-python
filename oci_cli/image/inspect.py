@@ -15,7 +15,10 @@
 
 import json
 import argparse
-from oci_api.image import Distribution
+import logging
+from oci_api.image import Distribution, ImageUnknownException
+
+log = logging.getLogger(__name__)
 
 class Inspect:
     @staticmethod
@@ -33,12 +36,15 @@ class Inspect:
     def __init__(self, options):
         distribution = Distribution()
         for image_name in options.image:
-            image = distribution.get_image(image_name)
-            image_json = image.config.to_dict(use_real_name=True)
-            image_json['RepoTags'] = [ 
-                image.name
-            ]
-            image_json['RepoDigests'] = [ 
-                image.repository + '@' + image.digest 
-            ]
-            print(json.dumps(image_json, indent=4, default=str))
+            try:
+                image = distribution.get_image(image_name)
+                image_json = image.config.to_dict(use_real_name=True)
+                image_json.pop('History')
+                image_json['Size'] = image.size()
+                image_json['VirtualSize'] = image.virtual_size()
+                image_json['RepoTags'] = [image.name]
+                image_json['RepoDigests'] = [image.repository + '@' + image.digest]
+                print(json.dumps(image_json, indent=4, default=str))
+            except ImageUnknownException:
+                log.error('Image (%s) does not exist' % image_name)
+                exit(-1)

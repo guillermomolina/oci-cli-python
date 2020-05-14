@@ -12,11 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import subprocess
 import argparse
 import pathlib
+import tempfile
+import logging
+from oci_api.image import Distribution, ImageUnknownException
+from oci_api.util.file import tar
 
-from oci_api.image import Distribution
+log = logging.getLogger(__name__)
 
 class Save:
     @staticmethod
@@ -27,7 +30,8 @@ class Save:
             description='Save one or more images to a tar archive (streamed to STDOUT by default)',
             help='Save one or more images to a tar archive')
         parser.add_argument('-o', '--output', 
-            help='Write to a file, instead of STDOUT',
+            help='Write to a file',
+            default='STDOUT',
             metavar='string')
         parser.add_argument('image',
             nargs='+',
@@ -35,5 +39,18 @@ class Save:
             help='Name of the image to save')
   
     def __init__(self, options):
-        distribution = Distribution() 
+        try:
+            with tempfile.TemporaryDirectory() as tmp_dir_name:
+                tmp_dir_path = pathlib.Path(tmp_dir_name)
+                distribution = Distribution()
+                for image_name in options.image:
+                    distribution.save_image(image_name, tmp_dir_path)
+                tar_file_path = None
+                if options.output != 'STDOUT':
+                    tar_file_path = pathlib.Path(options.output)
+                log.debug('Sending tar to %s' % options.output)
+                tar(tmp_dir_path, tar_file_path=tar_file_path)            
+        except ImageUnknownException as e:
+            log.error(e.args[0])
+            exit(-1)
            

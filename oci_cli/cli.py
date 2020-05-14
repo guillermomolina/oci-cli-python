@@ -22,6 +22,8 @@ from .container import Container
 from .volume import Volume
 from .image import Image
 
+log = logging.getLogger(__name__)
+
 log_levels = {
     'debug': logging.DEBUG, 
     'info': logging.INFO, 
@@ -83,7 +85,7 @@ class CLI:
         if options.debug:
             import ptvsd
             ptvsd.enable_attach()
-            print("Waiting for IDE to attach...")
+            log.info("Waiting for IDE to attach...")
             ptvsd.wait_for_attach()
 
         command = CLI.commands[options.command]

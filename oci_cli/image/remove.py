@@ -15,8 +15,12 @@
 
 import json
 import argparse
+import logging
 from oci_api import OCIError
-from oci_api.image import Distribution
+from oci_api.image import Distribution, ImageInUseException, ImageUnknownException
+from oci_api.runtime import Runtime
+
+log = logging.getLogger(__name__)
 
 class Remove:
     @staticmethod
@@ -37,6 +41,18 @@ class Remove:
         for image_name in options.image:
             try:
                 distribution.remove_image(image_name)
-            except OCIError as e:
+            except ImageInUseException:
+                runtime = Runtime()
+                image = distribution.get_image(image_name)
+                containers =  runtime.get_containers_using_image(image.id)
+                container_ids = [container.small_id for container in containers]
+                log.error('Image (%s) is being by containers (%s), can not remove' %
+                    (image_name, ','.join(container_ids)))
+                exit(-1)
+            except ImageUnknownException:
+                log.error('Image (%s) does not exist' % image_name)
+                exit(-1)
+            except:
                 raise e
-                print('Could not remove image (%s)' % image_name)
+                log.error('Could not remove image (%s)' % image_name)
+                exit(-1)

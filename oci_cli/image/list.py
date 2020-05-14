@@ -44,13 +44,13 @@ class List:
                 data['registry'] = image.repository
                 data['tag'] = image.tag
                 if options.digests:
-                    data['digest'] = image.digest
+                    data['digest'] = image.top_layer().digest
                 image_id = image.id
                 if not options.no_trunc:
-                    image_id = image_id[:12]
+                    image_id = image.small_id
                 data['image id'] = image_id
                 data['created'] = config.get('Created')
-                data['size'] = humanize.naturalsize(image.size)
+                data['size'] = humanize.naturalsize(image.size())
                 self.insert_image(images, data)
         for image in images:
             image['created'] = humanize.naturaltime(datetime.now(tz=timezone.utc) - image['created'])

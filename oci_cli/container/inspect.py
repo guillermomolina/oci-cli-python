@@ -15,7 +15,10 @@
 
 import json
 import argparse
-from oci_api.runtime import Runtime
+import logging
+from oci_api.runtime import Runtime, ContainerUnknownException
+
+log = logging.getLogger(__name__)
 
 class Inspect:
     @staticmethod
@@ -33,16 +36,10 @@ class Inspect:
     def __init__(self, options):
         runtime = Runtime()
         for container_ref in options.container:
-            container = runtime.get_container(container_ref)
-            '''container_json = {
-                'Id': container.id,
-                'Image': container.image_name
-            }'''
-            container_json = container.config.to_dict(use_real_name=True)
-            '''container_json['RepoTags'] = [ 
-                container.name
-            ]
-            container_json['RepoDigests'] = [ 
-                container.repository + '@' + container.digest 
-            ]'''
-            print(json.dumps(container_json, indent=4, default=str))
+            try:
+                container = runtime.get_container(container_ref)
+                container_json = container.config.to_dict(use_real_name=True)
+                print(json.dumps(container_json, indent=4, default=str))
+            except ContainerUnknownException:
+                log.error('Container (%s) does not exist' % container_ref)
+                exit(-1)
