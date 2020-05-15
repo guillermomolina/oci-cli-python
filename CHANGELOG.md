@@ -1,4 +1,10 @@
-# Change log for Solaris OCI
+# Change log for Solaris OCI CLI
+
+## 2020-05-15: Version 0.2.1
+
+- Modified "oci image history" to show LAYER instead of IMAGE
+- Changed requirements to add minimum version for oci packages
+
 
 ## 2020-05-14: Version 0.2.0
 

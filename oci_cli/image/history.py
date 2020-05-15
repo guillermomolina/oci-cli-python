@@ -46,25 +46,33 @@ class History:
             history_list = []
             layer_index = 0
             for history in image.config.get('History'):
-                history_json = {
-                    'image': image.small_id,
-                    'created': history.get('Created'),
-                    'created by': history.get('CreatedBy') or '',
-                    'size': 0,
-                    'comment': history.get('Comment') or '',
-                    'author': history.get('Author') or ''
-                }
-                if options.no_trunc:
-                    history_json['image'] = image.digest
-                else:
-                    if len(history_json['created by']) > 45:
-                        history_json['created by'] = history_json['created by'][:44] + '…'
-                if history.get('EmptyLayer'):
+                layer_id = '<empty>'
+                layer_size = 0
+                if not history.get('EmptyLayer'):
+                    if options.no_trunc:
+                        layer_id = image.layers[layer_index].digest
+                    else:
+                        layer_id = image.layers[layer_index].small_id
+                    layer_size = image.layers[layer_index].size()
                     layer_index += 1
-                else:
-                    history_json['image'] = '<missing>'
-                    history_json['size'] = image.layers[layer_index].size
-                history_json['size'] = humanize.naturalsize(history_json['size'])
+                created_by = history.get('CreatedBy') or ''
+                comment = history.get('Comment') or ''
+                author = history.get('Author') or ''
+                if not options.no_trunc:                    
+                    if len(created_by) > 45:
+                        created_by = created_by[:44] + '…'
+                    if len(comment) > 45:
+                        comment = comment[:44] + '…'
+                    if len(author) > 45:
+                        author = author[:44] + '…'
+                history_json = {
+                    'layer': layer_id,
+                    'created': history.get('Created'),
+                    'created by': created_by,
+                    'size': humanize.naturalsize(layer_size),
+                    'comment': comment,
+                    'author': author
+                }
                 self.insert_history(history_list, history_json)
             for history_json in history_list:
                 history_json['created'] = humanize.naturaltime(datetime.now(tz=timezone.utc) - 

@@ -47,18 +47,11 @@ class Load:
                 input_file = sys.stdin
                 if options.input != 'STDIN':
                     input_file = open(options.input, 'rb')
-                log.debug('Receiving tar from %s' % options.input)
+                log.debug('Start receiving tar from %s' % options.input)
                 untar(tmp_dir_path, tar_file=input_file)
-                oci_file_paths = list(tmp_dir_path.glob('**/oci-layout'))
-                if len(oci_file_paths) == 0:
-                    raise OCIError('There is no oci-layout file in (%s)' % str(tmp_dir_path))
-                if len(oci_file_paths) > 1:
-                    log.warn('There are (%d) images in (%s), can only load (1)' %
-                        (len(oci_file_paths), str(tmp_dir_path)))
-                oci_file_path = oci_file_paths[0]
-                repository_layout_path = oci_file_path.parent
+                log.debug('Finish receiving tar from %s' % options.input)
                 distribution = Distribution()
-                distribution.load_image(image_name, repository_layout_path)
+                distribution.load_image(image_name, tmp_dir_path)
         except ImageExistsException:
             log.error('Image (%s) already exists' % image_name)
             exit(-1)

@@ -1,4 +1,3 @@
-oci-spec
-oci-api
+oci-api>=0.3.0
 python-dateutil
 humanize
