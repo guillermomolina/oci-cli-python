@@ -41,23 +41,23 @@ class History:
     def __init__(self, options):
         image_name = options.image
         try:
-            distribution = Distribution()
-            image = distribution.get_image(options.image)
+            image = Distribution().get_image(options.image)
             history_list = []
             layer_index = 0
-            for history in image.config.get('History'):
-                layer_id = '<empty>'
-                layer_size = 0
-                if not history.get('EmptyLayer'):
+            now = datetime.now(tz=timezone.utc)
+            for history_item in image.config.get('History'):
+                layer = '<empty>'
+                size = 0
+                if not history_item.get('EmptyLayer'):
                     if options.no_trunc:
-                        layer_id = image.layers[layer_index].digest
+                        layer = image.layers[layer_index].digest
                     else:
-                        layer_id = image.layers[layer_index].small_id
-                    layer_size = image.layers[layer_index].size()
+                        layer = image.layers[layer_index].small_id
+                    size = image.layers[layer_index].size()
                     layer_index += 1
-                created_by = history.get('CreatedBy') or ''
-                comment = history.get('Comment') or ''
-                author = history.get('Author') or ''
+                created_by = history_item.get('CreatedBy') or ''
+                comment = history_item.get('Comment') or ''
+                author = history_item.get('Author') or ''
                 if not options.no_trunc:                    
                     if len(created_by) > 45:
                         created_by = created_by[:44] + '…'
@@ -66,26 +66,16 @@ class History:
                     if len(author) > 45:
                         author = author[:44] + '…'
                 history_json = {
-                    'layer': layer_id,
-                    'created': history.get('Created'),
+                    'layer': layer,
+                    'created': humanize.naturaltime(now - history_item.get('Created')),
                     'created by': created_by,
-                    'size': humanize.naturalsize(layer_size),
+                    'size': humanize.naturalsize(size),
                     'comment': comment,
                     'author': author
                 }
-                self.insert_history(history_list, history_json)
-            for history_json in history_list:
-                history_json['created'] = humanize.naturaltime(datetime.now(tz=timezone.utc) - 
-                    history_json['created'])
+                history_list.append(history_json)
+            history_list.reverse()
             print_table(history_list)
         except ImageUnknownException:
             log.error('Image (%s) does not exist' % image_name)
             exit(-1)
-
-
-    def insert_history(self, history_list, history_json):
-        for index, value in enumerate(history_list):
-            if value['created'] < history_json['created']:
-                history_list.insert(index, history_json)
-                return
-        history_list.append(history_json)

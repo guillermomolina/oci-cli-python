@@ -42,8 +42,11 @@ class Inspect:
                 image_json.pop('History')
                 image_json['Size'] = image.size()
                 image_json['VirtualSize'] = image.virtual_size()
-                image_json['RepoTags'] = [image.name]
-                image_json['RepoDigests'] = [image.repository + '@' + image.digest]
+                if len(image.tags) > 0:
+                    image_json['RepoTags'] = image.tags
+                repositories = distribution.get_repositories(image)
+                if len(repositories) > 0:
+                    image_json['RepoDigests'] = [repository + '@' + image.digest for repository in repositories]
                 print(json.dumps(image_json, indent=4, default=str))
             except ImageUnknownException:
                 log.error('Image (%s) does not exist' % image_name)

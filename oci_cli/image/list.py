@@ -15,6 +15,7 @@
 import argparse
 import humanize
 from datetime import datetime, timezone
+from oci_api.util import split_image_name
 from oci_api.util.print import print_table
 from oci_api.image import Distribution
 
@@ -35,30 +36,38 @@ class List:
             action='store_true')
              
     def __init__(self, options):
-        database = Distribution() 
         images = []
-        for repository in database.repositories.values():
-            for image in repository.images.values():
-                config = image.config
-                data = {}
-                data['registry'] = image.repository
-                data['tag'] = image.tag
-                if options.digests:
-                    data['digest'] = image.top_layer().digest
-                image_id = image.id
-                if not options.no_trunc:
-                    image_id = image.small_id
-                data['image id'] = image_id
-                data['created'] = config.get('Created')
-                data['size'] = humanize.naturalsize(image.size())
-                self.insert_image(images, data)
-        for image in images:
-            image['created'] = humanize.naturaltime(datetime.now(tz=timezone.utc) - image['created'])
+        for image in Distribution().images.values():
+            config = image.config
+            image_json = {}
+            image_json['repository'] = '<none>'
+            image_json['tag'] = '<none>'
+            if options.digests:
+                image_json['digest'] = image.top_layer().digest
+            image_id = image.id
+            if not options.no_trunc:
+                image_id = image.small_id
+            image_json['image id'] = image_id
+            image_json['created'] = config.get('Created')
+            image_json['size'] = humanize.naturalsize(image.size())
+            if len(image.tags) == 0:
+                self.insert_image(images, image_json)
+            else:
+                for image_name in image.tags:
+                    (repository, tag) = split_image_name(image_name)
+                    image_json['repository'] = repository
+                    image_json['tag'] = tag
+                    self.insert_image(images, image_json)
+                    image_json = image_json.copy()
+        now = datetime.now(tz=timezone.utc)
+        for image_json in images:
+            created = image_json['created']
+            image_json['created'] = humanize.naturaltime(now - created)
         print_table(images)
 
-    def insert_image(self, images, image):
+    def insert_image(self, images, image_json):
         for index, value in enumerate(images):
-            if value['created'] < image['created']:
-                images.insert(index, image)
+            if value['created'] < image_json['created']:
+                images.insert(index, image_json)
                 return
-        images.append(image)
+        images.append(image_json)

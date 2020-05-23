@@ -42,7 +42,7 @@ class Save:
         try:
             with tempfile.TemporaryDirectory() as tmp_dir_name:
                 tmp_dir_path = pathlib.Path(tmp_dir_name)
-                distribution = Distribution()
+                distribution = Image.distribution()
                 for image_name in options.image:
                     distribution.save_image(image_name, tmp_dir_path)
                 tar_file_path = None

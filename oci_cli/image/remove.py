@@ -31,6 +31,12 @@ class Remove:
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
             description='Remove one or more images',
             help='Remove one or more images')
+        parser.add_argument('-f', '--force',
+            help='Force removal of the image', 
+            action='store_true')
+        parser.add_argument('--no-prune',
+            help='Do not delete untagged parents', 
+            action='store_true')
         parser.add_argument('image',
             nargs='+', 
             metavar='IMAGE',
@@ -40,10 +46,10 @@ class Remove:
         distribution = Distribution()
         for image_name in options.image:
             try:
-                distribution.remove_image(image_name)
+                image = distribution.get_image(image_name)
+                distribution.remove_image(image, options.force)
             except ImageInUseException:
                 runtime = Runtime()
-                image = distribution.get_image(image_name)
                 containers =  runtime.get_containers_using_image(image.id)
                 container_ids = [container.small_id for container in containers]
                 log.error('Image (%s) is being by containers (%s), can not remove' %
@@ -52,7 +58,7 @@ class Remove:
             except ImageUnknownException:
                 log.error('Image (%s) does not exist' % image_name)
                 exit(-1)
-            except:
-                raise e
+            except Exception as e:
                 log.error('Could not remove image (%s)' % image_name)
+                raise e
                 exit(-1)

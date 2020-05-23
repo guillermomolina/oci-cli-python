@@ -72,6 +72,17 @@ REGISTRY   TAG     IMAGE ID       CREATED        SIZE
 solaris    small   8556bb25018f   a minute ago   46.0 MB
 ```
 
+#### Build an image
+
+```
+$ vi Dockerfile
+FROM solaris:small
+ADD /etc/hosts /
+CMD /bin/sh
+
+$ oci image build -t solaris:other .
+```
+
 
 ### Container commands
 

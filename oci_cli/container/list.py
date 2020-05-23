@@ -46,7 +46,7 @@ class List:
                 data['container id'] = container.id
             else:
                 data['container id'] = container.small_id
-            data['image'] = container.image.name            
+            data['image'] = container.image.name
             data['command'] = ' '.join(container_args)
             data['created'] = humanize.naturaltime(datetime.now(tz=timezone.utc) - 
                 container.create_time)

@@ -1,5 +1,15 @@
 # Change log for Solaris OCI CLI
 
+## 2020-05-23: Version 0.3.0
+
+- Added "oci image build"
+- Modified "oci image history" to show LAYER diff id instead of id
+- Modified "oci image history" to sort by layer relationship instead of creation date
+- Modified "oci image import" to use image build system
+- Modified "oci image list" to use new internal Image layout
+- Modified "oci image inspect" to use new internal Image layout
+
+
 ## 2020-05-15: Version 0.2.1
 
 - Modified "oci image history" to show LAYER instead of IMAGE

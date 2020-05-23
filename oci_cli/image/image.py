@@ -16,6 +16,7 @@ import subprocess
 import argparse
 import pathlib
 
+from .build import Build
 from .history import History
 from .import_ import Import
 from .inspect import Inspect
@@ -24,13 +25,9 @@ from .load import Load
 from .remove import Remove
 from .save import Save
 
-'''
-image -> repository
-tag -> index
-'''
-
 class Image:
     commands = {
+        'build': Build,
         'history': History,
         'import': Import,
         'inspect': Inspect,

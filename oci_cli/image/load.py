@@ -50,7 +50,7 @@ class Load:
                 log.debug('Start receiving tar from %s' % options.input)
                 untar(tmp_dir_path, tar_file=input_file)
                 log.debug('Finish receiving tar from %s' % options.input)
-                distribution = Distribution()
+                distribution = Image.distribution()
                 distribution.load_image(image_name, tmp_dir_path)
         except ImageExistsException:
             log.error('Image (%s) already exists' % image_name)
