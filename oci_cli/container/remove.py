@@ -35,10 +35,9 @@ class Remove:
             help='Name of the container to remove')
  
     def __init__(self, options):
-        runtime = Runtime()
         for container_ref in options.container:
             try:
-                runtime.remove_container(container_ref)
+                Runtime().remove_container(container_ref)
             except ContainerUnknownException:
                 log.error('Container (%s) does not exist' % container_ref)
                 exit(-1)

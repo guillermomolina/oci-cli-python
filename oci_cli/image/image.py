@@ -24,6 +24,7 @@ from .list import List
 from .load import Load
 from .remove import Remove
 from .save import Save
+from .tag import Tag
 
 class Image:
     commands = {
@@ -34,7 +35,8 @@ class Image:
         'load': Load,
         'ls': List,
         'rm': Remove,
-        'save': Save
+        'save': Save,
+        'tag': Tag
     }
 
     @staticmethod

@@ -13,7 +13,11 @@
 # limitations under the License.
 
 import argparse
+import logging
 from oci_api.runtime import Runtime
+from oci_api.image import Distribution
+
+log = logging.getLogger(__name__)
 
 class Create:
     @staticmethod
@@ -41,11 +45,15 @@ class Create:
             help='Command to run')
 
     def __init__(self, options):
-        runtime = Runtime()
-        container = runtime.create_container(
-            options.image,
-            name=options.name, 
-            command=options.cmd,
-            workdir=options.workdir)
-        '''if options.rm:
-            runtime.remove(container.id)'''
+        try:
+            image = Distribution().get_image(options.image)
+            runtime = Runtime()
+            container =  Runtime().create_container(
+                image,
+                name=options.name, 
+                command=options.cmd,
+                workdir=options.workdir)
+        except Exception as e:
+            raise e
+            log.error(e.args[0])
+            exit(-1)

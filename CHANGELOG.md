@@ -1,5 +1,11 @@
 # Change log for Solaris OCI CLI
 
+## 2020-05-25: Version 0.3.1
+
+- Added "oci image build" RUN command
+- Added "oci image tag"
+
+
 ## 2020-05-23: Version 0.3.0
 
 - Added "oci image build"
